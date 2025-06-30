@@ -1,7 +1,14 @@
 # git-toolkit
 
-A collection of safe cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches while preserving your work.
+A collection of cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches while preserving your work, with a test suite to ensure safety.
 
+USE AT YOUR OWN RISK! (I use them everyday, but of course, YMMV)
+
+Build with the assistance of Claude Code. `CLAUDE.md` is included for your own review.
+
+I am on a Mac Sequoia 15.5 (Silicon) using Warp terminal. I've tried to keep these functions as portable as possible. If you have an issue, open an Issue on Github with test script output.
+
+PRs welcome!
 
 ## Overview
 
@@ -636,7 +643,11 @@ Contributions are welcome! Please:
 
 ## Project History
 
-This project evolved from a simple git-undo bash function into a comprehensive Git safety toolkit. The current version prioritizes simplicity, safety, and cross-platform compatibility.
+I prefer using a standalone Git GUI tool—my favorite is https://git-fork.com/—for most of my Git workflows. A while ago, I created a simple `git-undo` bash function to solve one of my recurring pain points. Thanks to Claude Code, I was able to expand that into a full set of “missing” Git commands I’d always wanted. With the productivity boost from working with Claude Code, these utilities have become even more valuable to me. I hope you find them useful too!
+
+If you do, feel free to reach out on X at @tmgbabul.
+
+Wishing you safety, security, and good health! ☺️
 
 ## License
 

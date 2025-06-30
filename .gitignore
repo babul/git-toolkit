@@ -1,6 +1,4 @@
-!/.claude/
+.claude/
 .idea
 .DS_Store
-!/.gitignore
-CLAUDE.md
 tests/
