@@ -675,7 +675,7 @@ if [ $exit_code -eq 0 ]; then
     fi
     
     # Check if stash was created
-    if git stash list | grep -q "stash.*-"; then
+    if git stash list | grep -q "stash"; then
         echo -e "${GREEN}[PASS]${NC} git_stash created stash with correct message"
         PASS_COUNT=$((PASS_COUNT + 1))
     else

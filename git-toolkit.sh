@@ -217,22 +217,21 @@ git_undo() {
         return 0
     fi
 
-    local TIMESTAMP FULL_COMMIT_HASH CURRENT_BRANCH
-    TIMESTAMP=$(_git_format_timestamp)
+    local FULL_COMMIT_HASH CURRENT_BRANCH
     FULL_COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null)
     CURRENT_BRANCH=$(_git_get_current_branch)
     
-    local STASH_MSG="undo $CURRENT_BRANCH $TIMESTAMP $LAST_COMMIT_SUBJECT"
+    local STASH_MSG="undo $CURRENT_BRANCH $LAST_COMMIT_SUBJECT"
 
     git reset HEAD~1
     
     # Create temporary metadata file in working directory
     local temp_metadata="_undo_metadata_temp.txt"
     {
-        echo "## Undo: $TIMESTAMP"
+        echo "## Undo: $(_git_format_timestamp)"
         echo ""
         echo "**Commit Hash:** $FULL_COMMIT_HASH"
-        echo "**Stash:** undo $CURRENT_BRANCH $TIMESTAMP $LAST_COMMIT_SUBJECT"
+        echo "**Stash:** undo $CURRENT_BRANCH $LAST_COMMIT_SUBJECT"
         echo ""
         echo "### Original Commit Message:"
         echo '```'
@@ -316,13 +315,12 @@ git_stash() {
         return 0
     fi
 
-    local TIMESTAMP STASH_MSG CURRENT_BRANCH
-    TIMESTAMP=$(_git_format_timestamp)
+    local STASH_MSG CURRENT_BRANCH
     CURRENT_BRANCH=$(_git_get_current_branch)
     if [ -n "$CUSTOM_MESSAGE" ]; then
-        STASH_MSG="stash $CURRENT_BRANCH $TIMESTAMP $CUSTOM_MESSAGE"
+        STASH_MSG="stash $CURRENT_BRANCH $CUSTOM_MESSAGE"
     else
-        STASH_MSG="stash $CURRENT_BRANCH $TIMESTAMP"
+        STASH_MSG="stash $CURRENT_BRANCH"
     fi
     
     # Debug output
@@ -586,16 +584,14 @@ git_redo() {
             # POSIX-compliant: Using sed instead of ${var#${var%%[![:space:]]*}} for cross-platform compatibility
             stash_msg=$(echo "$stash_line" | cut -d: -f3- | sed 's/^ *//')
             
-            # Extract branch, timestamp and commit message from stash message
-            local branch_name timestamp commit_msg
+            # Extract branch and commit message from stash message
+            local branch_name commit_msg
             # POSIX-compliant: Using sed for regex extraction instead of bash parameter expansion
-            # Format: "undo BRANCH TIMESTAMP COMMIT_MSG"
+            # Format: "undo BRANCH COMMIT_MSG"
             # shellcheck disable=SC2001
             branch_name=$(echo "$stash_msg" | sed 's/undo \([^ ]*\) .*/\1/')
             # shellcheck disable=SC2001
-            timestamp=$(echo "$stash_msg" | sed 's/undo [^ ]* \([0-9-]* [0-9:]*\) .*/\1/')
-            # shellcheck disable=SC2001
-            commit_msg=$(echo "$stash_msg" | sed 's/undo [^ ]* [0-9-]* [0-9:]* //')
+            commit_msg=$(echo "$stash_msg" | sed 's/undo [^ ]* //')
             
             # Try to get metadata from the stash
             local metadata
@@ -603,7 +599,6 @@ git_redo() {
             
             printf "  %d. %s\n" "$stash_number" "$commit_msg"
             printf "     Branch: %s\n" "$branch_name"
-            printf "     Undone: %s\n" "$timestamp"
             if test -n "$metadata"; then
                 local original_hash
                 # POSIX-compliant: Using sed for pattern extraction
@@ -652,11 +647,11 @@ git_redo() {
     # Extract branch and commit message for confirmation
     local selected_branch_name selected_commit_msg
     # POSIX-compliant: Using sed for regex extraction instead of bash parameter expansion
-    # Format: "undo BRANCH TIMESTAMP COMMIT_MSG"
+    # Format: "undo BRANCH COMMIT_MSG"
     # shellcheck disable=SC2001
     selected_branch_name=$(echo "$selected_stash_msg" | sed 's/undo \([^ ]*\) .*/\1/')
     # shellcheck disable=SC2001
-    selected_commit_msg=$(echo "$selected_stash_msg" | sed 's/undo [^ ]* [0-9-]* [0-9:]* //')
+    selected_commit_msg=$(echo "$selected_stash_msg" | sed 's/undo [^ ]* //')
 
     echo "About to redo (restore) commit:"
     echo "  Commit: $selected_commit_msg"
