@@ -958,12 +958,12 @@ if echo "y" | git_clean_branches > /dev/null 2>&1; then
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
     
-    # Verify main branch still exists
-    if git branch | grep -q "main"; then
-        echo -e "${GREEN}[PASS]${NC} git_clean_branches preserved main branch"
+    # Verify default branch still exists
+    if git branch | grep -q "$DEFAULT_BRANCH"; then
+        echo -e "${GREEN}[PASS]${NC} git_clean_branches preserved $DEFAULT_BRANCH branch"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git_clean_branches deleted main branch"
+        echo -e "${RED}[FAIL]${NC} git_clean_branches deleted $DEFAULT_BRANCH branch"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
@@ -989,7 +989,7 @@ git commit -m "Initial commit" > /dev/null 2>&1
 # Capture the default branch name
 DEFAULT_BRANCH=$(get_default_branch)
 
-# Create and switch to a feature branch, then create another branch from main
+# Create and switch to a feature branch, then create another branch from default
 git checkout -b current-feature > /dev/null 2>&1
 echo "current" > current.txt
 git add current.txt
@@ -1353,9 +1353,9 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 35: git_squash - On main branch
-echo -e "${YELLOW}[TEST]${NC} git_squash: On main branch"
-TEST_DIR="$TEST_BASE_DIR/test-squash-main-$$"
+# Test 35: git_squash - On protected branch
+echo -e "${YELLOW}[TEST]${NC} git_squash: On protected branch"
+TEST_DIR="$TEST_BASE_DIR/test-squash-protected-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
@@ -1367,11 +1367,14 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
+# Capture the default branch name
+DEFAULT_BRANCH=$(get_default_branch)
+
 if ! output=$(git_squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Cannot squash commits on main/master/develop branch"; then
-    echo -e "${GREEN}[PASS]${NC} git_squash correctly prevented squashing on main branch"
+    echo -e "${GREEN}[PASS]${NC} git_squash correctly prevented squashing on $DEFAULT_BRANCH branch"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git_squash should have prevented squashing on main branch. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_squash should have prevented squashing on $DEFAULT_BRANCH branch. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
@@ -1550,9 +1553,9 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 42: git_status - On main branch (show pending commits)
-echo -e "${YELLOW}[TEST]${NC} git_status: On main branch (show pending commits)"
-TEST_DIR="$TEST_BASE_DIR/test-show-main-$$"
+# Test 42: git_status - On default branch (show pending commits)
+echo -e "${YELLOW}[TEST]${NC} git_status: On default branch (show pending commits)"
+TEST_DIR="$TEST_BASE_DIR/test-show-default-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
@@ -1564,18 +1567,21 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
+# Capture the default branch name
+DEFAULT_BRANCH=$(get_default_branch)
+
 if output=$(git_status $DEBUG_MODE 2>&1) && echo "$output" | grep -q "total commit(s) (no remote tracking branch)"; then
-    echo -e "${GREEN}[PASS]${NC} git_status correctly showed commit count for main branch without remote"
+    echo -e "${GREEN}[PASS]${NC} git_status correctly showed commit count for $DEFAULT_BRANCH branch without remote"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git_status should have shown commit count for main branch. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status should have shown commit count for $DEFAULT_BRANCH branch. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 43: git_status - Main branch with verbose modes
-echo -e "${YELLOW}[TEST]${NC} git_status: Main branch verbose modes"
-TEST_DIR="$TEST_BASE_DIR/test-show-main-verbose-$$"
+# Test 43: git_status - Default branch verbose modes
+echo -e "${YELLOW}[TEST]${NC} git_status: Default branch verbose modes"
+TEST_DIR="$TEST_BASE_DIR/test-show-default-verbose-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
@@ -1587,21 +1593,24 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
+# Capture the default branch name
+DEFAULT_BRANCH=$(get_default_branch)
+
 # Test -v option
 if output=$(git_status $DEBUG_MODE -v 2>&1) && echo "$output" | grep -q "All commits:"; then
-    echo -e "${GREEN}[PASS]${NC} git_status -v correctly showed commits for main branch"
+    echo -e "${GREEN}[PASS]${NC} git_status -v correctly showed commits for $DEFAULT_BRANCH branch"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git_status -v should have shown commits for main branch. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status -v should have shown commits for $DEFAULT_BRANCH branch. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 
 # Test -vv option
 if output=$(git_status $DEBUG_MODE -vv 2>&1) && echo "$output" | grep -q "All commits:"; then
-    echo -e "${GREEN}[PASS]${NC} git_status -vv correctly showed full commits for main branch"
+    echo -e "${GREEN}[PASS]${NC} git_status -vv correctly showed full commits for $DEFAULT_BRANCH branch"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git_status -vv should have shown full commits for main branch. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status -vv should have shown full commits for $DEFAULT_BRANCH branch. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
@@ -1639,10 +1648,10 @@ git config user.name "Test User"
 git config user.email "test@example.com"
 . "$SCRIPT_DIR/git-toolkit.sh"
 
-# Create main branch with initial commit
+# Create default branch with initial commit
 echo "initial" > file1.txt
 git add file1.txt
-git commit -m "Initial commit on main" > /dev/null 2>&1
+git commit -m "Initial commit" > /dev/null 2>&1
 
 # Capture the default branch name
 DEFAULT_BRANCH=$(get_default_branch)
@@ -1680,7 +1689,7 @@ git config user.name "Test User"
 git config user.email "test@example.com"
 . "$SCRIPT_DIR/git-toolkit.sh"
 
-# Create main branch
+# Create default branch
 echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
@@ -1720,7 +1729,7 @@ git config user.name "Test User"
 git config user.email "test@example.com"
 . "$SCRIPT_DIR/git-toolkit.sh"
 
-# Create main branch
+# Create default branch
 echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
@@ -1769,7 +1778,7 @@ git config user.name "Test User"
 git config user.email "test@example.com"
 . "$SCRIPT_DIR/git-toolkit.sh"
 
-# Create main branch
+# Create default branch
 echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
@@ -1838,7 +1847,7 @@ git config user.name "Test User"
 git config user.email "test@example.com"
 . "$SCRIPT_DIR/git-toolkit.sh"
 
-# Create main branch
+# Create default branch
 echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
