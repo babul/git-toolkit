@@ -391,143 +391,146 @@ Test prompt (y/N):
 [TEST] _git_format_timestamp: Edge case testing
 Testing normal timestamp generation...
 Testing fallback when DATE_FORMAT would be empty...
-Fallback logic works: '2025-06-30 15:11:54'
+Fallback logic works: '2025-07-01 01:12:28'
 Testing actual function consistency...
-Function consistency works: '2025-06-30 15:11:54'
+Function consistency works: '2025-07-01 01:12:28'
 Testing timestamp consistency...
 [PASS] _git_format_timestamp works correctly in all edge cases (4/4)
 [TEST] Cross-platform: Shell syntax compatibility
 [PASS] Script syntax is valid in bash
 
 ==========================================
-TESTING: git-undo function
+TESTING: git_undo function
 ==========================================
-[TEST] git-undo: Not in git repository
+[TEST] git_undo: Not in git repository
 [PASS] Correctly detected not in git repository
-[TEST] git-undo: Initial commit protection
+[TEST] git_undo: Initial commit protection
 [PASS] Correctly prevented undoing initial commit
-[TEST] git-undo: Dirty working directory
+[TEST] git_undo: Dirty working directory
 [PASS] Correctly detected dirty working directory
-[TEST] git-undo: Cancel undo operation
+[TEST] git_undo: Cancel undo operation
 [PASS] Cancel operation works correctly
-[TEST] git-undo: Normal undo operation
+[TEST] git_undo: Normal undo operation
 [PASS] Commit was successfully undone
 [PASS] Stash was created with correct message
 [PASS] Metadata was stored in stash with correct content
-[TEST] git-undo: Special characters in commit
-stash@{0}: On main: undo - 2025-06-30 15:11:58 - [sc-123] fix: handle special chars (test) & more [brackets]
+[TEST] git_undo: Special characters in commit
+stash@{0}: On main: undo main - 2025-07-01 01:12:32 - [sc-123] fix: handle special chars (test) & more [brackets]
 [PASS] Handled special characters in commit message
-[TEST] git-undo: Multiple undos in sequence
+[TEST] git_undo: Multiple undos in sequence
 [PASS] Multiple undos work correctly
-[TEST] git-undo: Comprehensive metadata preservation
+[TEST] git_undo: Comprehensive metadata preservation
 [PASS] Comprehensive metadata preservation works
 
 ==========================================
-TESTING: git-stash function
+TESTING: git_stash function
 ==========================================
-[TEST] git-stash: Not in git repository
-[PASS] git-stash correctly detected not in git repository
-[TEST] git-stash: Repository with no commits
-[PASS] git-stash correctly detected repository with no commits
-[TEST] git-stash: Clean working directory
-[PASS] git-stash correctly detected clean working directory
-[TEST] git-stash: Cancel stash operation
-[PASS] git-stash cancel operation works correctly
-[TEST] git-stash: Normal stash with modified files
-[PASS] git-stash cleaned working directory
-[PASS] git-stash created stash with correct message
-[TEST] git-stash: Stash with untracked files
-[PASS] git-stash handled both modified and untracked files
-[PASS] git-stash included untracked and ignored files in stash
-[TEST] git-stash: Stash with staged files
-[PASS] git-stash handled staged files correctly
-[TEST] git-stash: Complex scenario with all file types
-[PASS] git-stash completely cleaned complex working directory
-[PASS] git-stash preserved all file types correctly
+[TEST] git_stash: Not in git repository
+[PASS] git_stash correctly detected not in git repository
+[TEST] git_stash: Repository with no commits
+[PASS] git_stash correctly detected repository with no commits
+[TEST] git_stash: Clean working directory
+[PASS] git_stash correctly detected clean working directory
+[TEST] git_stash: Cancel stash operation
+[PASS] git_stash cancel operation works correctly
+[TEST] git_stash: Normal stash with modified files
+[PASS] git_stash cleaned working directory
+[PASS] git_stash created stash with correct message
+[TEST] git_stash: Stash with untracked files
+[PASS] git_stash handled both modified and untracked files
+[PASS] git_stash included untracked files in stash
+[TEST] git_stash: Stash with staged files
+[PASS] git_stash handled staged files correctly
+[TEST] git_stash: Complex scenario with all file types
+[PASS] git_stash completely cleaned complex working directory
+[PASS] git_stash preserved all file types correctly
 
 ==========================================
-TESTING: git-clean-branches function
+TESTING: git_clean_branches function
 ==========================================
-[TEST] git-clean-branches: Not in git repository
-[PASS] git-clean-branches correctly detected not in git repository
-[TEST] git-clean-branches: Repository with no commits
-[PASS] git-clean-branches correctly detected repository with no commits
-[TEST] git-clean-branches: No branches to clean
-[PASS] git-clean-branches correctly detected no branches to clean
-[TEST] git-clean-branches: Cancel operation
-[PASS] git-clean-branches cancel operation works correctly
-[TEST] git-clean-branches: Clean merged branches
-[PASS] git-clean-branches successfully cleaned merged branches
-[PASS] git-clean-branches preserved main branch
-[TEST] git-clean-branches: Protect current branch
-[PASS] git-clean-branches protected current branch
-[TEST] git-clean-branches: Handle unmerged branches
-[PASS] git-clean-branches protected unmerged branch
-[PASS] git-clean-branches deleted merged branch
-[PASS] git-clean-branches properly handled unmerged branch
+[TEST] git_clean_branches: Not in git repository
+[PASS] git_clean_branches correctly detected not in git repository
+[TEST] git_clean_branches: Repository with no commits
+[PASS] git_clean_branches correctly detected repository with no commits
+[TEST] git_clean_branches: No branches to clean
+[PASS] git_clean_branches correctly detected no branches to clean
+[TEST] git_clean_branches: Cancel operation
+[PASS] git_clean_branches cancel operation works correctly
+[TEST] git_clean_branches: Clean merged branches
+[PASS] git_clean_branches successfully cleaned merged branches
+[PASS] git_clean_branches preserved main branch
+[TEST] git_clean_branches: Protect current branch
+[PASS] git_clean_branches protected current branch
+[TEST] git_clean_branches: Handle unmerged branches
+[PASS] git_clean_branches protected unmerged branch
+[PASS] git_clean_branches deleted merged branch
+[PASS] git_clean_branches properly handled unmerged branch
 
 ==========================================
-TESTING: git-redo function
+TESTING: git_redo function
 ==========================================
-[TEST] git-redo: Not in git repository
-[PASS] git-redo correctly detected not in git repository
-[TEST] git-redo: Repository with no commits
-[PASS] git-redo correctly detected repository with no commits
-[TEST] git-redo: No undo stashes available
-[PASS] git-redo correctly detected no undo stashes
-[TEST] git-redo: Dirty working directory
-[PASS] git-redo correctly detected dirty working directory
-[TEST] git-redo: Cancel redo operation
-[PASS] git-redo cancel at selection works correctly
-[PASS] git-redo cancel at confirmation works correctly
-[TEST] git-redo: Successful redo operation
+[TEST] git_redo: Not in git repository
+[PASS] git_redo correctly detected not in git repository
+[TEST] git_redo: Repository with no commits
+[PASS] git_redo correctly detected repository with no commits
+[TEST] git_redo: No undo stashes available
+[PASS] git_redo correctly detected no undo stashes
+[TEST] git_redo: Dirty working directory
+[PASS] git_redo correctly detected dirty working directory
+[TEST] git_redo: Cancel redo operation
+[PASS] git_redo cancel at selection works correctly
+[PASS] git_redo cancel at confirmation works correctly
+[TEST] git_redo: Successful redo operation
 [PASS] File was removed after undo
-[PASS] git-redo successfully restored changes
-[PASS] git-redo left changes in working directory
+[PASS] git_redo successfully restored changes
+[PASS] git_redo left changes in working directory
 
 ==========================================
-TESTING: git-squash function
+TESTING: git_squash function
 ==========================================
-[TEST] git-squash: Not in git repository
-[PASS] git-squash correctly detected not in git repository
-[TEST] git-squash: Repository with no commits
-[PASS] git-squash correctly detected repository with no commits
-[TEST] git-squash: Dirty working directory
-[PASS] git-squash correctly detected dirty working directory
-[TEST] git-squash: On main branch
-[PASS] git-squash correctly prevented squashing on main branch
-[TEST] git-squash: Only one commit on branch
-[PASS] git-squash correctly detected only one commit
-[TEST] git-squash: Cancel squash operation
-[PASS] git-squash cancel operation works correctly
-[TEST] git-squash: Successful squash operation
-[PASS] git-squash function defined and preview works (interactive test skipped)
-[TEST] git-squash: No base branch found
-[PASS] git-squash correctly detected no base branch
+[TEST] git_squash: Not in git repository
+[PASS] git_squash correctly detected not in git repository
+[TEST] git_squash: Repository with no commits
+[PASS] git_squash correctly detected repository with no commits
+[TEST] git_squash: Dirty working directory
+[PASS] git_squash correctly detected dirty working directory
+[TEST] git_squash: On protected branch
+[PASS] git_squash correctly prevented squashing on main branch
+[TEST] git_squash: Only one commit on branch
+[PASS] git_squash correctly detected only one commit
+[TEST] git_squash: Cancel squash operation
+[PASS] git_squash cancel operation works correctly
+[TEST] git_squash: Successful squash operation
+[PASS] git_squash function defined and preview works (interactive test skipped)
+[TEST] git_squash: No base branch found
+[PASS] git_squash correctly detected no base branch
 
 ==========================================
-TESTING: git-status function
+TESTING: git_status function
 ==========================================
-[TEST] git-status: Not in git repository
-[PASS] git-status correctly detected not in git repository
-[TEST] git-status: Repository with no commits
-[PASS] git-status correctly detected repository with no commits
-[TEST] git-status: On main branch (not allowed)
-[PASS] git-status correctly prevented use on main branch
-[TEST] git-status: Nonexistent branch
-[PASS] git-status correctly detected nonexistent branch
-[TEST] git-status: Basic functionality
-[PASS] git-status correctly identified branch fork point
-[TEST] git-status: With specific branch parameter
-[PASS] git-status correctly identified specific branch fork point
-[TEST] git-status: Verbose mode (-v)
-[PASS] git-status -v correctly showed commits since fork
-[TEST] git-status: Full verbose mode (-vv)
-[PASS] git-status -vv correctly showed full commit details
-[TEST] git-status: Invalid option
-[PASS] git-status correctly handled invalid option
-[TEST] git-status: Develop branch preference
-[PASS] git-status correctly preferred develop over main
+[TEST] git_status: Not in git repository
+[PASS] git_status correctly detected not in git repository
+[TEST] git_status: Repository with no commits
+[PASS] git_status correctly detected repository with no commits
+[TEST] git_status: On default branch (show pending commits)
+[PASS] git_status correctly showed commit count for main branch without remote
+[TEST] git_status: Default branch verbose modes
+[PASS] git_status -v correctly showed commits for main branch
+[PASS] git_status -vv correctly showed full commits for main branch
+[TEST] git_status: Nonexistent branch
+[PASS] git_status correctly detected nonexistent branch
+[TEST] git_status: Basic functionality
+[PASS] git_status correctly identified branch fork point
+[TEST] git_status: With specific branch parameter
+[PASS] git_status correctly identified specific branch fork point
+[TEST] git_status: Verbose mode (-v)
+[PASS] git_status -v correctly showed commits since fork
+[TEST] git_status: Full verbose mode (-vv)
+[PASS] git_status -vv correctly showed full commit details
+[TEST] git_status: Invalid option
+[PASS] git_status correctly handled invalid option
+[TEST] git_status: Develop branch preference
+[PASS] git_status correctly preferred develop over main
 
 ===============================================
 Test Results: 63 passed, 0 failed
@@ -542,12 +545,12 @@ The test suite provides comprehensive coverage across **63 tests** organized int
 | **Category** | **Tests** | **Coverage** |
 |---|---|---|
 | **Cross-platform compatibility** | 3 | Shell feature validation, timestamp edge cases, syntax compatibility |
-| **git-undo function** | 9 | Error conditions, user interactions, metadata preservation |
-| **git-stash function** | 11 | File type handling, clean state verification, branch naming |
-| **git-clean-branches function** | 11 | Branch detection, protection logic, deletion safety |
-| **git-redo function** | 9 | Stash restoration, user selection, working directory checks |
-| **git-squash function** | 8 | Commit consolidation, editor integration, branch protection |
-| **git-status function** | 12 | Fork detection, verbose modes, main branch pending commits, branch validation |
+| **git_undo function** | 9 | Error conditions, user interactions, metadata preservation |
+| **git_stash function** | 10 | File type handling, clean state verification, branch naming |
+| **git_clean_branches function** | 11 | Branch detection, protection logic, deletion safety |
+| **git_redo function** | 9 | Stash restoration, user selection, working directory checks |
+| **git_squash function** | 8 | Commit consolidation, editor integration, branch protection |
+| **git_status function** | 13 | Fork detection, verbose modes, main branch pending commits, branch validation |
 
 **Test Types:**
 - **Error condition tests** (20 tests): Repository validation, commit existence, permission checks
