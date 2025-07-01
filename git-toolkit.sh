@@ -5,14 +5,36 @@
 #set -e
 
 # Shared constants
-if [ -z "$PROTECTED_BRANCHES_PATTERN" ]; then
-    readonly PROTECTED_BRANCHES_PATTERN="^(main|master|develop)$"
+# Ensure pattern is properly set, work around readonly issues
+# Debug: check the actual content and length
+if [ ${#PROTECTED_BRANCHES_PATTERN} -eq 0 ]; then
+    # Pattern is empty or unset, try to set it or use override
+    if ! readonly PROTECTED_BRANCHES_PATTERN="^(main|master|develop)$" 2>/dev/null; then
+        # Setting failed (probably readonly), use override
+        PROTECTED_BRANCHES_PATTERN_OVERRIDE="^(main|master|develop)$"
+    fi
+else
+    # Pattern has content, check if it's valid
+    if [ "$PROTECTED_BRANCHES_PATTERN" = "" ] || [ "$PROTECTED_BRANCHES_PATTERN" = " " ]; then
+        PROTECTED_BRANCHES_PATTERN_OVERRIDE="^(main|master|develop)$"
+    fi
 fi
 if [ -z "$DATE_FORMAT" ] || [ "$DATE_FORMAT" = "" ]; then
     readonly DATE_FORMAT='%Y-%m-%d %H:%M:%S'
 fi
 
 # Shared utility functions
+_git_get_protected_pattern() {
+    if [ -n "$PROTECTED_BRANCHES_PATTERN_OVERRIDE" ]; then
+        echo "$PROTECTED_BRANCHES_PATTERN_OVERRIDE"
+    elif [ -n "$PROTECTED_BRANCHES_PATTERN" ] && [ ${#PROTECTED_BRANCHES_PATTERN} -gt 0 ]; then
+        echo "$PROTECTED_BRANCHES_PATTERN"
+    else
+        # Fallback to default pattern if everything else fails
+        echo "^(main|master|develop)$"
+    fi
+}
+
 _git_validate_repo() {
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
         echo "✗ Error: Not a git repository"
@@ -65,7 +87,99 @@ _git_validate_all() {
     return 0
 }
 
+_git_get_uncommitted_status() {
+    local show_details="$1"
+    local modified_count=0
+    local staged_count=0
+    local untracked_count=0
+    local total_count=0
+    
+    # Get staged files
+    local staged_files
+    staged_files=$(git diff --cached --name-only 2>/dev/null)
+    if [ -n "$staged_files" ]; then
+        staged_count=$(echo "$staged_files" | wc -l)
+        total_count=$((total_count + staged_count))
+    fi
+    
+    # Get modified files
+    local modified_files
+    modified_files=$(git diff --name-only 2>/dev/null)
+    if [ -n "$modified_files" ]; then
+        modified_count=$(echo "$modified_files" | wc -l)
+        total_count=$((total_count + modified_count))
+    fi
+    
+    # Get untracked files
+    local untracked_files
+    untracked_files=$(git ls-files --others --exclude-standard 2>/dev/null)
+    if [ -n "$untracked_files" ]; then
+        untracked_count=$(echo "$untracked_files" | wc -l)
+        total_count=$((total_count + untracked_count))
+    fi
+    
+    if [ "$total_count" -eq 0 ]; then
+        echo "Git branch is clean"
+        return 0
+    fi
+    
+    if [ "$show_details" = "true" ]; then
+        echo "Uncommitted changes:"
+        local sections_shown=0
+        
+        if [ "$staged_count" -gt 0 ]; then
+            [ "$sections_shown" -gt 0 ] && echo
+            printf "  \033[32mChanges to be committed:\033[0m\n"
+            echo "$staged_files" | sed 's/^/    /' | while read -r file; do
+                printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file"
+            done
+            sections_shown=$((sections_shown + 1))
+        fi
+        if [ "$modified_count" -gt 0 ]; then
+            [ "$sections_shown" -gt 0 ] && echo
+            printf "  \033[31mChanges not staged for commit:\033[0m\n"
+            echo "$modified_files" | sed 's/^/    /' | while read -r file; do
+                printf "    \033[31mmodified:   \033[31m%s\033[0m\n" "$file"
+            done
+            sections_shown=$((sections_shown + 1))
+        fi
+        if [ "$untracked_count" -gt 0 ]; then
+            [ "$sections_shown" -gt 0 ] && echo
+            printf "  \033[31mUntracked files:\033[0m\n"
+            echo "$untracked_files" | sed 's/^/    /' | while read -r file; do
+                printf "    \033[31m%s\033[0m\n" "$file"
+            done
+            sections_shown=$((sections_shown + 1))
+        fi
+    else
+        echo "$total_count uncommitted files"
+    fi
+}
+
 git-undo() {
+    local DEBUG_MODE=""
+    
+    # Parse command line arguments
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --debug)
+                DEBUG_MODE="true"
+                shift
+                ;;
+            -*)
+                echo "✗ Error: Unknown option '$1'"
+                echo "Usage: git-undo [--debug]"
+                echo "  --debug Show debug information"
+                return 1
+                ;;
+            *)
+                echo "✗ Error: Unexpected argument '$1'"
+                echo "Usage: git-undo [--debug]"
+                return 1
+                ;;
+        esac
+    done
+    
     _git_validate_all || return 1
 
     if [ "$(git rev-list --count HEAD 2>/dev/null)" -eq 1 ]; then
@@ -81,6 +195,15 @@ git-undo() {
     COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null)
     COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an <%ae>" 2>/dev/null)
     COMMIT_DATE=$(git log -1 --pretty=format:"%ai" 2>/dev/null)
+    
+    # Debug output
+    if [ "$DEBUG_MODE" = "true" ]; then
+        echo "=== DEBUG MODE ==="
+        echo "Current HEAD: $(git rev-parse HEAD 2>/dev/null)"
+        echo "Working directory clean: $(git diff-index --quiet HEAD 2>/dev/null && echo "true" || echo "false")"
+        echo "Commit count: $(git rev-list --count HEAD 2>/dev/null)"
+        echo "=================="
+    fi
     
     echo "About to undo commit:"
     echo "  Hash: $COMMIT_HASH"
@@ -152,12 +275,36 @@ git-undo() {
 }
 
 git-stash() {
+    local DEBUG_MODE=""
+    
+    # Parse command line arguments
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --debug)
+                DEBUG_MODE="true"
+                shift
+                ;;
+            -*)
+                echo "✗ Error: Unknown option '$1'"
+                echo "Usage: git-stash [--debug]"
+                echo "  --debug Show debug information"
+                return 1
+                ;;
+            *)
+                echo "✗ Error: Unexpected argument '$1'"
+                echo "Usage: git-stash [--debug]"
+                return 1
+                ;;
+        esac
+    done
+    
     _git_validate_all || return 1
 
-    # Check if there's anything to stash
+    # Check if there's anything to stash (including ignored files)
     if git diff-index --quiet HEAD 2>/dev/null && \
        git diff-index --quiet --cached HEAD 2>/dev/null && \
-       test -z "$(git ls-files --others --exclude-standard 2>/dev/null)"; then
+       test -z "$(git ls-files --others --exclude-standard 2>/dev/null)" && \
+       test -z "$(git ls-files --others --ignored --exclude-standard 2>/dev/null)"; then
         echo "✓ No changes to stash (working directory is clean)"
         return 0
     fi
@@ -167,8 +314,19 @@ git-stash() {
     CURRENT_BRANCH=$(_git_get_current_branch)
     STASH_MSG="stash $CURRENT_BRANCH - $TIMESTAMP"
     
+    # Debug output
+    if [ "$DEBUG_MODE" = "true" ]; then
+        echo "=== DEBUG MODE ==="
+        echo "Current branch: $CURRENT_BRANCH"
+        echo "Modified files: $(git diff --name-only 2>/dev/null | wc -l)"
+        echo "Staged files: $(git diff --cached --name-only 2>/dev/null | wc -l)"
+        echo "Untracked files: $(git ls-files --others --exclude-standard 2>/dev/null | wc -l)"
+        echo "Ignored files: $(git ls-files --others --ignored --exclude-standard 2>/dev/null | wc -l)"
+        echo "Stash message: $STASH_MSG"
+        echo "=================="
+    fi
 
-    echo "Stashing all changes (including untracked files)..."
+    echo "Stashing all changes (including untracked and ignored files)..."
     
     # Show what will be stashed
     echo
@@ -185,6 +343,10 @@ git-stash() {
         echo "  Untracked files:"
         git ls-files --others --exclude-standard 2>/dev/null
     fi
+    if test -n "$(git ls-files --others --ignored --exclude-standard 2>/dev/null)"; then
+        echo "  Ignored files:"
+        git ls-files --others --ignored --exclude-standard 2>/dev/null
+    fi
     echo
 
     if ! _git_confirm_action "Proceed with stashing all changes?"; then
@@ -192,8 +354,8 @@ git-stash() {
         return 0
     fi
 
-    # Stash everything including untracked files
-    if ! git stash push --include-untracked -m "$STASH_MSG" 2>/dev/null; then
+    # Stash everything including untracked & ignored files
+    if ! git stash push --all -m "$STASH_MSG" 2>/dev/null; then
         echo "✗ Error: Failed to create stash"
         return 1
     fi
@@ -214,11 +376,44 @@ git-stash() {
 }
 
 git-clean-branches() {
+    local DEBUG_MODE=""
+    
+    # Parse command line arguments
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --debug)
+                DEBUG_MODE="true"
+                shift
+                ;;
+            -*)
+                echo "✗ Error: Unknown option '$1'"
+                echo "Usage: git-clean-branches [--debug]"
+                echo "  --debug Show debug information"
+                return 1
+                ;;
+            *)
+                echo "✗ Error: Unexpected argument '$1'"
+                echo "Usage: git-clean-branches [--debug]"
+                return 1
+                ;;
+        esac
+    done
+    
     _git_validate_all || return 1
 
     # Get current branch name
     local CURRENT_BRANCH
     CURRENT_BRANCH=$(_git_get_current_branch)
+    
+    # Debug output
+    if [ "$DEBUG_MODE" = "true" ]; then
+        echo "=== DEBUG MODE ==="
+        echo "Current branch: $CURRENT_BRANCH"
+        echo "Total local branches: $(git branch | wc -l)"
+        echo "Total remote branches: $(git branch -r | wc -l)"
+        echo "Protected pattern: $(_git_get_protected_pattern)"
+        echo "=================="
+    fi
     
     # Collect branches to delete
     local MERGED_BRANCHES=""
@@ -301,6 +496,29 @@ git-clean-branches() {
 }
 
 git-redo() {
+    local DEBUG_MODE=""
+    
+    # Parse command line arguments
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --debug)
+                DEBUG_MODE="true"
+                shift
+                ;;
+            -*)
+                echo "✗ Error: Unknown option '$1'"
+                echo "Usage: git-redo [--debug]"
+                echo "  --debug Show debug information"
+                return 1
+                ;;
+            *)
+                echo "✗ Error: Unexpected argument '$1'"
+                echo "Usage: git-redo [--debug]"
+                return 1
+                ;;
+        esac
+    done
+    
     _git_validate_all || return 1
 
     # Check if working directory is clean
@@ -314,6 +532,15 @@ git-redo() {
     # Get list of undo stashes (those created by git-undo)
     local UNDO_STASHES
     UNDO_STASHES=$(git stash list 2>/dev/null | grep "undo -" | head -10)
+    
+    # Debug output
+    if [ "$DEBUG_MODE" = "true" ]; then
+        echo "=== DEBUG MODE ==="
+        echo "Working directory clean: $(git diff-index --quiet HEAD 2>/dev/null && echo "true" || echo "false")"
+        echo "Total stashes: $(git stash list 2>/dev/null | wc -l)"
+        echo "Undo stashes found: $(echo "$UNDO_STASHES" | grep -c "undo -" 2>/dev/null || echo "0")"
+        echo "=================="
+    fi
     
     if test -z "$UNDO_STASHES"; then
         echo "✓ No undo stashes found to redo"
@@ -426,12 +653,46 @@ git-redo() {
 }
 
 git-squash() {
+    local DEBUG_MODE=""
+    
+    # Parse command line arguments
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --debug)
+                DEBUG_MODE="true"
+                shift
+                ;;
+            -*)
+                echo "✗ Error: Unknown option '$1'"
+                echo "Usage: git-squash [--debug]"
+                echo "  --debug Show debug information"
+                return 1
+                ;;
+            *)
+                echo "✗ Error: Unexpected argument '$1'"
+                echo "Usage: git-squash [--debug]"
+                return 1
+                ;;
+        esac
+    done
+    
     _git_validate_all || return 1
     _git_check_clean_working_dir || return 1
 
     # Get current branch
     local CURRENT_BRANCH
     CURRENT_BRANCH=$(_git_get_current_branch)
+    
+    # Debug output
+    if [ "$DEBUG_MODE" = "true" ]; then
+        echo "=== DEBUG MODE ==="
+        echo "Current branch: $CURRENT_BRANCH"
+        echo "Working directory clean: $(git diff-index --quiet HEAD 2>/dev/null && echo "true" || echo "false")"
+        echo "Total commits: $(git rev-list --count HEAD 2>/dev/null)"
+        echo "Protected pattern: $(_git_get_protected_pattern)"
+        echo "Is protected branch: $(echo "$CURRENT_BRANCH" | grep -qE "$(_git_get_protected_pattern)" && echo "true" || echo "false")"
+        echo "=================="
+    fi
     
     # Check if we're on main/master/develop (can't squash these)
     if echo "$CURRENT_BRANCH" | grep -qE "$PROTECTED_BRANCHES_PATTERN"; then
@@ -566,7 +827,7 @@ git-squash() {
     rm -f "$temp_commit_msg"
 }
 
-git-show() {
+git-status() {
     # Temporarily disable debug output
     local old_x_setting=""
     if [[ $- == *x* ]]; then
@@ -579,6 +840,7 @@ git-show() {
     local VERBOSE_MODE=""
     local TARGET_BRANCH=""
     local CURRENT_BRANCH
+    local DEBUG_MODE=""
     
     # Parse command line arguments
     while [ $# -gt 0 ]; do
@@ -591,11 +853,16 @@ git-show() {
                 VERBOSE_MODE="full"
                 shift
                 ;;
+            --debug)
+                DEBUG_MODE="true"
+                shift
+                ;;
             -*)
                 echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git-show [-v|-vv] [branch-name]"
-                echo "  -v   Show commits since fork (feature branches) or pending commits (main/master/develop)"
-                echo "  -vv  Show full commits since fork (feature branches) or pending commits (main/master/develop)"
+                echo "Usage: git-status [-v|-vv] [--debug] [branch-name]"
+                echo "  -v      Show commits since fork (feature branches) or pending commits (main/master/develop)"
+                echo "  -vv     Show full commits since fork (feature branches) or pending commits (main/master/develop)"
+                echo "  --debug Show debug information about branch detection and logic flow"
                 return 1
                 ;;
             *)
@@ -611,6 +878,22 @@ git-show() {
         TARGET_BRANCH="$CURRENT_BRANCH"
     fi
     
+    # Debug output
+    if [ "$DEBUG_MODE" = "true" ]; then
+        local effective_pattern
+        effective_pattern=$(_git_get_protected_pattern)
+        echo "=== DEBUG MODE ==="
+        echo "TARGET_BRANCH: '$TARGET_BRANCH'"
+        echo "CURRENT_BRANCH: '$CURRENT_BRANCH'"
+        echo "PROTECTED_BRANCHES_PATTERN: '$PROTECTED_BRANCHES_PATTERN'"
+        echo "Pattern length: ${#PROTECTED_BRANCHES_PATTERN}"
+        echo "Pattern hex dump: $(echo -n "$PROTECTED_BRANCHES_PATTERN" | od -t x1 -A n)"
+        echo "PROTECTED_BRANCHES_PATTERN_OVERRIDE: '$PROTECTED_BRANCHES_PATTERN_OVERRIDE'"
+        echo "Effective pattern: '$effective_pattern'"
+        echo "Pattern match test: $(echo "$TARGET_BRANCH" | grep -qE "$effective_pattern" && echo "MATCHES" || echo "NO MATCH")"
+        echo "=================="
+    fi
+    
     # Validate that the target branch exists
     if ! git rev-parse --verify "$TARGET_BRANCH" > /dev/null 2>&1; then
         echo "✗ Error: Branch '$TARGET_BRANCH' does not exist"
@@ -618,7 +901,8 @@ git-show() {
     fi
     
     # Check if target branch is main/master/develop - show pending commits
-    if echo "$TARGET_BRANCH" | grep -qE "$PROTECTED_BRANCHES_PATTERN"; then
+    if echo "$TARGET_BRANCH" | grep -qE "$(_git_get_protected_pattern)"; then
+        [ "$DEBUG_MODE" = "true" ] && echo "DEBUG: Taking PROTECTED BRANCH path"
         # For main/master/develop branches, show commits since last push
         local REMOTE_BRANCH="origin/$TARGET_BRANCH"
         local PENDING_COMMITS=""
@@ -629,7 +913,15 @@ git-show() {
             PENDING_COMMITS=$(git rev-list --count "$REMOTE_BRANCH..$TARGET_BRANCH" 2>/dev/null)
             
             if [ "$PENDING_COMMITS" -gt 0 ]; then
-                echo "The $TARGET_BRANCH branch has $PENDING_COMMITS pending commit(s) since last push"
+                printf "The \033[33m%s\033[0m branch has \033[33m%s\033[0m pending commit(s) since last push\n" "$TARGET_BRANCH" "$PENDING_COMMITS"
+                echo
+                
+                # Show uncommitted files status
+                if [ -n "$VERBOSE_MODE" ]; then
+                    _git_get_uncommitted_status "true"
+                else
+                    _git_get_uncommitted_status "false"
+                fi
                 
                 # Show pending commits if verbose mode is enabled
                 if [ -n "$VERBOSE_MODE" ]; then
@@ -643,13 +935,29 @@ git-show() {
                     fi
                 fi
             else
-                echo "The $TARGET_BRANCH branch is up to date with remote (no pending commits)"
+                printf "The \033[33m%s\033[0m branch is up to date with remote (no pending commits)\n" "$TARGET_BRANCH"
+                echo
+                
+                # Show uncommitted files status
+                if [ -n "$VERBOSE_MODE" ]; then
+                    _git_get_uncommitted_status "true"
+                else
+                    _git_get_uncommitted_status "false"
+                fi
             fi
         else
             # No remote tracking branch
             local TOTAL_COMMITS
             TOTAL_COMMITS=$(git rev-list --count "$TARGET_BRANCH" 2>/dev/null)
-            echo "The $TARGET_BRANCH branch has $TOTAL_COMMITS total commit(s) (no remote tracking branch)"
+            printf "The \033[33m%s\033[0m branch has \033[33m%s\033[0m total commit(s) (no remote tracking branch)\n" "$TARGET_BRANCH" "$TOTAL_COMMITS"
+            echo
+            
+            # Show uncommitted files status
+            if [ -n "$VERBOSE_MODE" ]; then
+                _git_get_uncommitted_status "true"
+            else
+                _git_get_uncommitted_status "false"
+            fi
             
             # Show all commits if verbose mode is enabled
             if [ -n "$VERBOSE_MODE" ]; then
@@ -671,6 +979,7 @@ git-show() {
         return 0
     fi
     
+    [ "$DEBUG_MODE" = "true" ] && echo "DEBUG: Taking FEATURE BRANCH path"
     # Find potential base branches to check against
     local BASE_CANDIDATES=""
     local BASE_BRANCH=""
@@ -710,7 +1019,7 @@ git-show() {
     # If no good candidate found from common branches, check other branches
     if [ -z "$BEST_BASE" ] && [ -n "$BASE_CANDIDATES" ]; then
         # Use a temporary file to avoid subshell variable issues
-        local temp_file="/tmp/git-show-$$"
+        local temp_file="/tmp/git-status-$$"
         echo "$BASE_CANDIDATES" > "$temp_file"
         
         while read -r candidate; do
@@ -748,7 +1057,15 @@ git-show() {
     CLEAN_BASE_NAME=$(echo "$BASE_BRANCH" | sed 's/^origin\///')
     
     # Output the result
-    echo "The $TARGET_BRANCH branch forked from $CLEAN_BASE_NAME at commit $BASE_COMMIT"
+    printf "The \033[33m%s\033[0m branch forked from \033[33m%s\033[0m at commit \033[33m%s\033[0m\n" "$TARGET_BRANCH" "$CLEAN_BASE_NAME" "$BASE_COMMIT"
+    echo
+    
+    # Show uncommitted files status
+    if [ -n "$VERBOSE_MODE" ]; then
+        _git_get_uncommitted_status "true"
+    else
+        _git_get_uncommitted_status "false"
+    fi
     
     # Show commits since fork if verbose mode is enabled
     if [ -n "$VERBOSE_MODE" ]; then

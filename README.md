@@ -1,12 +1,12 @@
 # git-toolkit
 
-A collection of cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches while preserving your work, with a test suite to ensure safety.
+An opinionated collection of cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches while preserving your work, with a test suite to ensure safety.
 
 USE AT YOUR OWN RISK! (I use them everyday, but of course, YMMV)
 
-Build with the assistance of Claude Code. `CLAUDE.md` is included for your own review.
+Built with the assistance of Claude Code. `CLAUDE.md` is included for your own review.
 
-I am on a Mac Sequoia 15.5 (Silicon) using Warp terminal. I've tried to keep these functions as portable as possible. If you have an issue, open an Issue on Github with test script output.
+I am on a Mac Sequoia 15.5 (Silicon) using Warp terminal. I've tried to keep these functions as portable as possible. If you have an issue, run the test script in debug mode and post an Issue on Github in this repository.
 
 PRs welcome!
 
@@ -14,14 +14,14 @@ PRs welcome!
 
 This toolkit provides six essential Git utilities:
 
-| Function | Purpose | Key Benefits |
-|----------|---------|--------------|
-| **`git-undo`** | Safely undo the last commit while preserving changes in a stash | Interactive preview, metadata preservation, safe rollback |
-| **`git-redo`** | Restore previously undone commits from undo stashes | Smart stash detection, interactive selection, conflict-safe |
-| **`git-stash`** | Stash all changes (including untracked files) to get a clean working directory | Complete file coverage, preview mode, guaranteed clean state |
-| **`git-clean-branches`** | Clean up merged and orphaned branches with detailed previews | Branch protection, detailed reporting, selective cleanup |
-| **`git-squash`** | Squash all commits in current branch into the oldest commit | Interactive commit message editing, preserves authorship, uses current date |
-| **`git-show`** | Show what branch any feature branch forked from | Smart base detection, verbose commit history, develop preference |
+| Function | Purpose                                                                                    | Key Benefits |
+|----------|--------------------------------------------------------------------------------------------|--------------|
+| **`git-undo`** | Safely undo the last commit while preserving changes in a stash                            | Interactive preview, metadata preservation, safe rollback |
+| **`git-redo`** | Restore previously undone commits from undo stashes                                        | Smart stash detection, interactive selection, conflict-safe |
+| **`git-stash`** | Stash all changes (including untracked and ignored files) to get a clean working directory | Complete file coverage, preview mode, guaranteed clean state |
+| **`git-clean-branches`** | Clean up merged and orphaned branches with detailed previews                               | Branch protection, detailed reporting, selective cleanup |
+| **`git-squash`** | Squash all commits in current branch into the oldest commit                                | Interactive commit message editing, preserves authorship, uses current date |
+| **`git-status`** | Show count of commits and untracked files, what branch any feature branch forked from      | Smart base detection, verbose commit history, develop preference |
 
 All functions follow the same safe pattern: show what will happen, ask for confirmation, then execute with clear feedback.
 
@@ -59,16 +59,16 @@ git-undo
 - Requires clean working directory
 
 ### git-stash  
-Stash all changes including untracked files to get a clean branch.
+Stash all changes including untracked and ignored files to get a clean branch.
 
 ```bash
 git-stash
 ```
 
 **Features:**
-- Handles modified, staged, and untracked files
+- Handles modified, staged, untracked, and ignored files
 - Shows preview of what will be stashed
-- Uses `--include-untracked` for complete cleanup
+- Uses `--all` for complete cleanup including ignored files
 - Branch-named and timestamped stash messages for easy identification
 
 ### git-redo
@@ -114,16 +114,17 @@ git-squash
 - Protects main/master/develop branches from being squashed
 - Safe rollback if editor is cancelled or fails
 
-### git-show
+### git-status
 Show what branch any feature branch forked from, or show pending commits for main/master/develop branches.
 
 ```bash
-git-show [options] [branch-name]
+git-status [options] [branch-name]
 ```
 
 **Options:**
 - `-v` Show commits since fork (feature branches) or pending commits (main/master/develop)
 - `-vv` Show full commits since fork (feature branches) or pending commits (main/master/develop)
+- `--debug` Show detailed diagnostic information for troubleshooting
 
 **Features:**
 - **Feature branches**: Automatically detects fork point from main/master/develop
@@ -181,7 +182,7 @@ You can now:
 ### git-stash
 ```bash
 $ git-stash
-Stashing all changes (including untracked files)...
+Stashing all changes (including untracked and ignored files)...
 
 Files to be stashed:
   Modified files:
@@ -239,18 +240,18 @@ Squashed commit:
 k9l0m1n Add initial feature with updates and fixes
 ```
 
-### git-show
+### git-status
 ```bash
 # Feature branch - basic usage
-$ git-show
+$ git-status
 The feature/sentry-posthog branch forked from develop at commit 8ac50fd2
 
 # Feature branch - specific branch
-$ git-show bugfix/login-issue
+$ git-status bugfix/login-issue
 The bugfix/login-issue branch forked from main at commit 3f7a9e12
 
 # Feature branch - show commits since fork (one line each)
-$ git-show -v feature/analytics
+$ git-status -v feature/analytics
 The feature/analytics branch forked from develop at commit 8ac50fd2
 
 Commits since fork:
@@ -259,11 +260,11 @@ e4f5g6h Configure analytics dashboard
 h7i8j9k Fix tracking bugs
 
 # Main branch - show pending commits
-$ git-show main
+$ git-status main
 The main branch has 3 pending commit(s) since last push
 
 # Main branch - show pending commits with details
-$ git-show -v main
+$ git-status -v main
 The main branch has 3 pending commit(s) since last push
 
 Pending commits:
@@ -272,11 +273,11 @@ e4f5g6h Update documentation
 h7i8j9k Add new feature endpoint
 
 # Main branch - no remote tracking branch
-$ git-show main
+$ git-status main
 The main branch has 15 total commit(s) (no remote tracking branch)
 
 # Main branch - show all commits when no remote
-$ git-show -v main
+$ git-status -v main
 The main branch has 15 total commit(s) (no remote tracking branch)
 
 All commits:
@@ -285,7 +286,7 @@ e4f5g6h Previous commit
 h7i8j9k Initial commit
 
 # Feature branch - full verbose mode
-$ git-show -vv feature/new-ui
+$ git-status -vv feature/new-ui
 The feature/new-ui branch forked from develop at commit 8ac50fd2
 
 Commits since fork:
@@ -323,10 +324,10 @@ $ git-undo
 $ git-undo
 ✗ Error: Repository has no commits
 
-# git-show invalid option
-$ git-show -x
+# git-status invalid option
+$ git-status -x
 ✗ Error: Unknown option '-x'
-Usage: git-show [-v|-vv] [branch-name]
+Usage: git-status [-v|-vv] [branch-name]
   -v   Show commits since fork (feature branches) or pending commits (main/master/develop)
   -vv  Show full commits since fork (feature branches) or pending commits (main/master/develop)
 ```
@@ -359,8 +360,13 @@ Run the comprehensive test suite:
 ./test-git-toolkit.sh
 ```
 
+Run tests in debug mode for troubleshooting:
+```bash
+./test-git-toolkit.sh --debug
+```
+
 **Test coverage includes:**
-- All six functions (`git-undo`, `git-redo`, `git-stash`, `git-clean-branches`, `git-squash`, `git-show`)
+- All six functions (`git-undo`, `git-redo`, `git-stash`, `git-clean-branches`, `git-squash`, `git-status`)
 - Error conditions and edge cases
 - User interaction scenarios (confirmation, cancellation)
 - Cross-platform compatibility validation
@@ -430,7 +436,7 @@ TESTING: git-stash function
 [PASS] git-stash created stash with correct message
 [TEST] git-stash: Stash with untracked files
 [PASS] git-stash handled both modified and untracked files
-[PASS] git-stash included untracked files in stash
+[PASS] git-stash included untracked and ignored files in stash
 [TEST] git-stash: Stash with staged files
 [PASS] git-stash handled staged files correctly
 [TEST] git-stash: Complex scenario with all file types
@@ -498,28 +504,28 @@ TESTING: git-squash function
 [PASS] git-squash correctly detected no base branch
 
 ==========================================
-TESTING: git-show function
+TESTING: git-status function
 ==========================================
-[TEST] git-show: Not in git repository
-[PASS] git-show correctly detected not in git repository
-[TEST] git-show: Repository with no commits
-[PASS] git-show correctly detected repository with no commits
-[TEST] git-show: On main branch (not allowed)
-[PASS] git-show correctly prevented use on main branch
-[TEST] git-show: Nonexistent branch
-[PASS] git-show correctly detected nonexistent branch
-[TEST] git-show: Basic functionality
-[PASS] git-show correctly identified branch fork point
-[TEST] git-show: With specific branch parameter
-[PASS] git-show correctly identified specific branch fork point
-[TEST] git-show: Verbose mode (-v)
-[PASS] git-show -v correctly showed commits since fork
-[TEST] git-show: Full verbose mode (-vv)
-[PASS] git-show -vv correctly showed full commit details
-[TEST] git-show: Invalid option
-[PASS] git-show correctly handled invalid option
-[TEST] git-show: Develop branch preference
-[PASS] git-show correctly preferred develop over main
+[TEST] git-status: Not in git repository
+[PASS] git-status correctly detected not in git repository
+[TEST] git-status: Repository with no commits
+[PASS] git-status correctly detected repository with no commits
+[TEST] git-status: On main branch (not allowed)
+[PASS] git-status correctly prevented use on main branch
+[TEST] git-status: Nonexistent branch
+[PASS] git-status correctly detected nonexistent branch
+[TEST] git-status: Basic functionality
+[PASS] git-status correctly identified branch fork point
+[TEST] git-status: With specific branch parameter
+[PASS] git-status correctly identified specific branch fork point
+[TEST] git-status: Verbose mode (-v)
+[PASS] git-status -v correctly showed commits since fork
+[TEST] git-status: Full verbose mode (-vv)
+[PASS] git-status -vv correctly showed full commit details
+[TEST] git-status: Invalid option
+[PASS] git-status correctly handled invalid option
+[TEST] git-status: Develop branch preference
+[PASS] git-status correctly preferred develop over main
 
 ===============================================
 Test Results: 63 passed, 0 failed
@@ -539,7 +545,7 @@ The test suite provides comprehensive coverage across **63 tests** organized int
 | **git-clean-branches function** | 11 | Branch detection, protection logic, deletion safety |
 | **git-redo function** | 9 | Stash restoration, user selection, working directory checks |
 | **git-squash function** | 8 | Commit consolidation, editor integration, branch protection |
-| **git-show function** | 12 | Fork detection, verbose modes, main branch pending commits, branch validation |
+| **git-status function** | 12 | Fork detection, verbose modes, main branch pending commits, branch validation |
 
 **Test Types:**
 - **Error condition tests** (20 tests): Repository validation, commit existence, permission checks
@@ -562,6 +568,22 @@ The test suite provides comprehensive coverage across **63 tests** organized int
 
 ## Advanced Features
 
+### Debug Mode
+All git-toolkit functions support a `--debug` flag for troubleshooting:
+```bash
+git-undo --debug
+git-redo --debug
+git-stash --debug
+git-clean-branches --debug
+git-squash --debug
+git-status --debug
+```
+
+Debug mode provides detailed diagnostic information including:
+- Branch detection and pattern matching
+- Variable values and code path selection
+- Detailed execution flow for troubleshooting
+
 ### git-undo
 - **Metadata preservation**: Full commit details stored in stash
 - **Special character handling**: Supports complex commit messages
@@ -576,7 +598,7 @@ The test suite provides comprehensive coverage across **63 tests** organized int
 - **Conflict handling**: Graceful handling of merge conflicts
 
 ### git-stash  
-- **Complete coverage**: Modified, staged, and untracked files
+- **Complete coverage**: Modified, staged, untracked, and ignored files
 - **Preview functionality**: See exactly what will be stashed
 - **Clean state guarantee**: Working directory guaranteed clean after stashing
 
@@ -594,7 +616,7 @@ The test suite provides comprehensive coverage across **63 tests** organized int
 - **Safe operation**: Protects against squashing main branches, provides rollback on failure
 - **Cross-platform editor support**: Works with any configured git editor
 
-### git-show
+### git-status
 - **Dual functionality**: Works on both feature branches and main/master/develop branches
 - **Feature branches**: Smart base detection, automatically finds fork point from main/master/develop
 - **Main branches**: Shows pending commits since last push, or total commits if no remote
@@ -602,6 +624,7 @@ The test suite provides comprehensive coverage across **63 tests** organized int
 - **Verbose modes**: Optional one-line (-v) or full commit (-vv) history for both branch types
 - **Clean output**: Suppresses debug output for professional results
 - **Flexible usage**: Works with current branch or specified branch name
+- **Debug mode**: Detailed diagnostic information available with `--debug` flag
 
 ## Limitations
 
@@ -627,7 +650,7 @@ The test suite provides comprehensive coverage across **63 tests** organized int
 - Needs base branch (main/master/develop) to exist for comparison
 - Editor cancellation or empty message cancels the operation
 
-### git-show
+### git-status
 - **Feature branches**: Requires base branches (main/master/develop) to exist for comparison
 - **Feature branches**: May not detect correct base if branch history is complex or rebased  
 - **Main branches**: Pending commit detection requires remote tracking branch for accurate count
