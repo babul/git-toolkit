@@ -41,6 +41,11 @@ cleanup_test_dirs() {
 }
 
 # Test utilities
+get_default_branch() {
+    # Get the current default branch name (main or master)
+    git branch --show-current 2>/dev/null || echo "main"
+}
+
 setup_test_repo() {
     local test_name="$1"
     # Use test directory to ensure complete isolation from parent git repo
@@ -885,12 +890,15 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
+# Capture the default branch name
+DEFAULT_BRANCH=$(get_default_branch)
+
 # Create and merge a feature branch
 git checkout -b feature-branch > /dev/null 2>&1
 echo "feature" > feature.txt
 git add feature.txt
 git commit -m "Add feature" > /dev/null 2>&1
-git checkout main > /dev/null 2>&1
+git checkout "$DEFAULT_BRANCH" > /dev/null 2>&1
 git merge feature-branch > /dev/null 2>&1
 
 if echo "n" | git_clean_branches 2>&1 | grep -q "Branch cleanup cancelled"; then
@@ -922,19 +930,22 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
+# Capture the default branch name
+DEFAULT_BRANCH=$(get_default_branch)
+
 # Create multiple feature branches and merge them
 git checkout -b feature-1 > /dev/null 2>&1
 echo "feature1" > feature1.txt
 git add feature1.txt
 git commit -m "Add feature 1" > /dev/null 2>&1
-git checkout main > /dev/null 2>&1
+git checkout "$DEFAULT_BRANCH" > /dev/null 2>&1
 git merge feature-1 > /dev/null 2>&1
 
 git checkout -b feature-2 > /dev/null 2>&1
 echo "feature2" > feature2.txt
 git add feature2.txt
 git commit -m "Add feature 2" > /dev/null 2>&1
-git checkout main > /dev/null 2>&1
+git checkout "$DEFAULT_BRANCH" > /dev/null 2>&1
 git merge feature-2 > /dev/null 2>&1
 
 if echo "y" | git_clean_branches > /dev/null 2>&1; then
@@ -975,18 +986,21 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
+# Capture the default branch name
+DEFAULT_BRANCH=$(get_default_branch)
+
 # Create and switch to a feature branch, then create another branch from main
 git checkout -b current-feature > /dev/null 2>&1
 echo "current" > current.txt
 git add current.txt
 git commit -m "Current feature work" > /dev/null 2>&1
 
-git checkout main > /dev/null 2>&1
+git checkout "$DEFAULT_BRANCH" > /dev/null 2>&1
 git checkout -b other-feature > /dev/null 2>&1
 echo "other" > other.txt
 git add other.txt
 git commit -m "Other feature" > /dev/null 2>&1
-git checkout main > /dev/null 2>&1
+git checkout "$DEFAULT_BRANCH" > /dev/null 2>&1
 git merge other-feature > /dev/null 2>&1
 
 # Switch back to current-feature
@@ -1022,19 +1036,22 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
+# Capture the default branch name
+DEFAULT_BRANCH=$(get_default_branch)
+
 # Create an unmerged feature branch
 git checkout -b unmerged-feature > /dev/null 2>&1
 echo "unmerged work" > unmerged.txt
 git add unmerged.txt
 git commit -m "Unmerged feature work" > /dev/null 2>&1
-git checkout main > /dev/null 2>&1
+git checkout "$DEFAULT_BRANCH" > /dev/null 2>&1
 
 # Create a merged branch for comparison
 git checkout -b merged-feature > /dev/null 2>&1
 echo "merged work" > merged.txt
 git add merged.txt
 git commit -m "Merged feature work" > /dev/null 2>&1
-git checkout main > /dev/null 2>&1
+git checkout "$DEFAULT_BRANCH" > /dev/null 2>&1
 git merge merged-feature > /dev/null 2>&1
 
 output=$(echo "y" | git_clean_branches 2>&1)
@@ -1665,6 +1682,9 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
+# Capture the default branch name
+DEFAULT_BRANCH=$(get_default_branch)
+
 # Create feature branch
 git checkout -b feature-test > /dev/null 2>&1
 echo "feature" > feature.txt
@@ -1672,7 +1692,7 @@ git add feature.txt
 git commit -m "Feature commit" > /dev/null 2>&1
 
 # Switch back to main and test specifying the branch
-git checkout main > /dev/null 2>&1
+git checkout "$DEFAULT_BRANCH" > /dev/null 2>&1
 
 output=$(git_status $DEBUG_MODE feature-test 2>&1)
 # Strip ANSI color codes for comparison
