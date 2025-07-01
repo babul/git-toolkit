@@ -1,0 +1,90 @@
+name: Bug Report
+description: Report a bug or issue with git-toolkit
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Before submitting, please make sure you've run the test suite in debug mode as described below.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please confirm you've completed these steps before submitting
+      options:
+        - label: I have run `./test-git-toolkit.sh --debug` and included the output below
+          required: true
+        - label: I have checked existing issues to make sure this isn't a duplicate
+          required: true
+        - label: I am using a supported shell (bash 4.0+, zsh, or POSIX-compliant shell)
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Run command '...'
+        2. See error '...'
+        3. Expected behavior was '...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Please provide your environment details
+      placeholder: |
+        - OS: [e.g., macOS 12.0, Ubuntu 20.04]
+        - Shell: [e.g., bash 5.1, zsh 5.8]
+        - Git version: [e.g., 2.34.1]
+        - Terminal: [e.g., Terminal.app, iTerm2, Warp]
+    validations:
+      required: true
+
+  - type: textarea
+    id: debug-output
+    attributes:
+      label: Debug Test Output
+      description: |
+        **REQUIRED**: Please run `./test-git-toolkit.sh --debug` and paste the complete output below.
+        This debug information is essential for troubleshooting.
+      placeholder: |
+        Paste the complete output from: ./test-git-toolkit.sh --debug
+        
+        (If the output is very long, you can create a gist and link to it instead)
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: function-debug
+    attributes:
+      label: Function Debug Output (if applicable)
+      description: |
+        If the issue is with a specific function, please run that function with --debug and paste the output
+      placeholder: |
+        Example: git-status --debug
+        
+        (Paste the debug output here)
+      render: shell
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other context about the problem (screenshots, logs, etc.)
+      placeholder: Add any other context about the problem here...

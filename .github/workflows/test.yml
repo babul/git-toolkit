@@ -1,0 +1,55 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Git
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+    
+    - name: Make test script executable
+      run: chmod +x test-git-toolkit.sh
+    
+    - name: Run test suite
+      run: ./test-git-toolkit.sh
+    
+    - name: Run test suite in debug mode
+      run: ./test-git-toolkit.sh --debug
+      if: failure()
+
+  test-cross-platform:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        shell: [bash, sh]
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Git
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+    
+    - name: Make test script executable
+      run: chmod +x test-git-toolkit.sh
+    
+    - name: Run test suite with ${{ matrix.shell }}
+      run: ${{ matrix.shell }} ./test-git-toolkit.sh
+      
+    - name: Run debug test on failure
+      run: ${{ matrix.shell }} ./test-git-toolkit.sh --debug
+      if: failure()
