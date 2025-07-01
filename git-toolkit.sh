@@ -322,7 +322,6 @@ git_stash() {
         echo "Modified files: $(git diff --name-only 2>/dev/null | wc -l)"
         echo "Staged files: $(git diff --cached --name-only 2>/dev/null | wc -l)"
         echo "Untracked files: $(git ls-files --others --exclude-standard 2>/dev/null | wc -l)"
-        echo "Ignored files: $(git ls-files --others --ignored --exclude-standard 2>/dev/null | wc -l)"
         echo "Stash message: $STASH_MSG"
         echo "=================="
     fi
@@ -332,21 +331,42 @@ git_stash() {
     # Show what will be stashed
     echo
     echo "Files to be stashed:"
-    if ! git diff-index --quiet HEAD 2>/dev/null; then
-        echo "  Modified files:"
-        git diff --name-only 2>/dev/null
+    local sections_shown=0
+    
+    # Show staged files (green)
+    local staged_files
+    staged_files=$(git diff --cached --name-only 2>/dev/null)
+    if [ -n "$staged_files" ]; then
+        [ "$sections_shown" -gt 0 ] && echo
+        printf "  \033[32mChanges to be committed:\033[0m\n"
+        echo "$staged_files" | while read -r file; do
+            printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file"
+        done
+        sections_shown=$((sections_shown + 1))
     fi
-    if ! git diff-index --quiet --cached HEAD 2>/dev/null; then
-        echo "  Staged files:"
-        git diff --cached --name-only 2>/dev/null
+    
+    # Show modified files (red)
+    local modified_files
+    modified_files=$(git diff --name-only 2>/dev/null)
+    if [ -n "$modified_files" ]; then
+        [ "$sections_shown" -gt 0 ] && echo
+        printf "  \033[31mChanges not staged for commit:\033[0m\n"
+        echo "$modified_files" | while read -r file; do
+            printf "    \033[31mmodified:   \033[31m%s\033[0m\n" "$file"
+        done
+        sections_shown=$((sections_shown + 1))
     fi
-    if test -n "$(git ls-files --others --exclude-standard 2>/dev/null)"; then
-        echo "  Untracked files:"
-        git ls-files --others --exclude-standard 2>/dev/null
-    fi
-    if test -n "$(git ls-files --others --ignored --exclude-standard 2>/dev/null)"; then
-        echo "  Ignored files:"
-        git ls-files --others --ignored --exclude-standard 2>/dev/null
+    
+    # Show untracked files (red)
+    local untracked_files
+    untracked_files=$(git ls-files --others --exclude-standard 2>/dev/null)
+    if [ -n "$untracked_files" ]; then
+        [ "$sections_shown" -gt 0 ] && echo
+        printf "  \033[31mUntracked files:\033[0m\n"
+        echo "$untracked_files" | while read -r file; do
+            printf "    \033[31m%s\033[0m\n" "$file"
+        done
+        sections_shown=$((sections_shown + 1))
     fi
     echo
 
