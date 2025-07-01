@@ -242,17 +242,17 @@ fi
 
 echo
 echo "=========================================="
-echo "TESTING: git-undo function"
+echo "TESTING: git_undo function"
 echo "=========================================="
 
 # Test 4: Not in git repository
-echo -e "${YELLOW}[TEST]${NC} git-undo: Not in git repository"
+echo -e "${YELLOW}[TEST]${NC} git_undo: Not in git repository"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-nogit-XXXXXX)"
 cd "$TEST_DIR" || exit 1
 source "$SCRIPT_DIR/git-toolkit.sh"
 
-if ! output=$(git-undo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
+if ! output=$(git_undo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
     echo -e "${GREEN}[PASS]${NC} Correctly detected not in git repository"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
@@ -263,12 +263,12 @@ cd "$SCRIPT_DIR"
 rm -rf "$TEST_DIR"
 
 # Test 5: Initial commit protection
-echo -e "${YELLOW}[TEST]${NC} git-undo: Initial commit protection"
+echo -e "${YELLOW}[TEST]${NC} git_undo: Initial commit protection"
 TEST_DIR=$(setup_test_repo_with_commit "initial")
 cd "$TEST_DIR" || exit 1
 source "$SCRIPT_DIR/git-toolkit.sh"
 
-if ! output=$(git-undo $DEBUG_MODE 2>&1) && (echo "$output" | grep -q "Error: Cannot undo the initial commit" || echo "$output" | grep -q "Error: Repository has no commits"); then
+if ! output=$(git_undo $DEBUG_MODE 2>&1) && (echo "$output" | grep -q "Error: Cannot undo the initial commit" || echo "$output" | grep -q "Error: Repository has no commits"); then
     echo -e "${GREEN}[PASS]${NC} Correctly prevented undoing initial commit"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
@@ -278,7 +278,7 @@ fi
 cleanup_test_repo "$TEST_DIR"
 
 # Test 5: Dirty working directory
-echo -e "${YELLOW}[TEST]${NC} git-undo: Dirty working directory"
+echo -e "${YELLOW}[TEST]${NC} git_undo: Dirty working directory"
 TEST_DIR="$TEST_BASE_DIR/test-dirty-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -297,7 +297,7 @@ git commit -m "Second commit" > /dev/null 2>&1
 
 echo "dirty" > file3.txt  # Uncommitted change
 
-if ! output=$(git-undo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Working directory is not clean"; then
+if ! output=$(git_undo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Working directory is not clean"; then
     echo -e "${GREEN}[PASS]${NC} Correctly detected dirty working directory"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
@@ -307,7 +307,7 @@ fi
 cleanup_test_repo "$TEST_DIR"
 
 # Test 6: Cancel undo operation
-echo -e "${YELLOW}[TEST]${NC} git-undo: Cancel undo operation"
+echo -e "${YELLOW}[TEST]${NC} git_undo: Cancel undo operation"
 TEST_DIR="$TEST_BASE_DIR/test-cancel-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -324,7 +324,7 @@ echo "second" > file2.txt
 git add file2.txt
 git commit -m "Second commit" > /dev/null 2>&1
 
-if echo "n" | git-undo 2>&1 | grep -q "Undo cancelled"; then
+if echo "n" | git_undo 2>&1 | grep -q "Undo cancelled"; then
     if [ "$(git rev-list --count HEAD)" -eq 2 ]; then
         echo -e "${GREEN}[PASS]${NC} Cancel operation works correctly"
         PASS_COUNT=$((PASS_COUNT + 1))
@@ -339,7 +339,7 @@ fi
 cleanup_test_repo "$TEST_DIR"
 
 # Test 7: Normal undo operation
-echo -e "${YELLOW}[TEST]${NC} git-undo: Normal undo operation"
+echo -e "${YELLOW}[TEST]${NC} git_undo: Normal undo operation"
 TEST_DIR="$TEST_BASE_DIR/test-normal-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -359,7 +359,7 @@ git commit -m "Second commit to undo" > /dev/null 2>&1
 commit_hash=$(git rev-parse HEAD)
 
 # Run undo and capture output for debugging
-output=$(echo "y" | git-undo 2>&1)
+output=$(echo "y" | git_undo 2>&1)
 exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
@@ -403,7 +403,7 @@ fi
 cleanup_test_repo "$TEST_DIR"
 
 # Test 8: Special characters in commit
-echo -e "${YELLOW}[TEST]${NC} git-undo: Special characters in commit"
+echo -e "${YELLOW}[TEST]${NC} git_undo: Special characters in commit"
 TEST_DIR="$TEST_BASE_DIR/test-special-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -420,7 +420,7 @@ echo "second" > file2.txt
 git add file2.txt
 git commit -m "[sc-123] fix: handle special chars (test) & more [brackets]" > /dev/null 2>&1
 
-if echo "y" | git-undo > /dev/null 2>&1; then
+if echo "y" | git_undo > /dev/null 2>&1; then
     if git stash list | grep -F "[sc-123] fix: handle special chars (test) & more [brackets]"; then
         echo -e "${GREEN}[PASS]${NC} Handled special characters in commit message"
         PASS_COUNT=$((PASS_COUNT + 1))
@@ -435,7 +435,7 @@ fi
 cleanup_test_repo "$TEST_DIR"
 
 # Test 9: Multiple undos in sequence
-echo -e "${YELLOW}[TEST]${NC} git-undo: Multiple undos in sequence"
+echo -e "${YELLOW}[TEST]${NC} git_undo: Multiple undos in sequence"
 TEST_DIR="$TEST_BASE_DIR/test-multiple-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -457,9 +457,9 @@ git add file3.txt
 git commit -m "Third commit" > /dev/null 2>&1
 
 # First undo
-if echo "y" | git-undo > /dev/null 2>&1; then
+if echo "y" | git_undo > /dev/null 2>&1; then
     # Second undo
-    if echo "y" | git-undo > /dev/null 2>&1; then
+    if echo "y" | git_undo > /dev/null 2>&1; then
         if [ "$(git rev-list --count HEAD)" -eq 1 ] && [ "$(git stash list | wc -l)" -eq 2 ]; then
             echo -e "${GREEN}[PASS]${NC} Multiple undos work correctly"
             PASS_COUNT=$((PASS_COUNT + 1))
@@ -478,7 +478,7 @@ fi
 cleanup_test_repo "$TEST_DIR"
 
 # Test 10: Comprehensive metadata preservation
-echo -e "${YELLOW}[TEST]${NC} git-undo: Comprehensive metadata preservation"
+echo -e "${YELLOW}[TEST]${NC} git_undo: Comprehensive metadata preservation"
 TEST_DIR="$TEST_BASE_DIR/test-metadata-comprehensive-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -505,7 +505,7 @@ This tests comprehensive metadata preservation."
 
 git commit -m "$COMMIT_MSG" > /dev/null 2>&1
 
-if echo "y" | git-undo > /dev/null 2>&1; then
+if echo "y" | git_undo > /dev/null 2>&1; then
     STASH_NAME=$(git stash list | head -1 | cut -d: -f1)
     if [ -n "$STASH_NAME" ]; then
         # Test that metadata file exists in stash
@@ -546,28 +546,28 @@ cleanup_test_repo "$TEST_DIR"
 
 echo
 echo "=========================================="
-echo "TESTING: git-stash function"
+echo "TESTING: git_stash function"
 echo "=========================================="
 
-# Test 11: git-stash - Not in git repository
-echo -e "${YELLOW}[TEST]${NC} git-stash: Not in git repository"
+# Test 11: git_stash - Not in git repository
+echo -e "${YELLOW}[TEST]${NC} git_stash: Not in git repository"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-stash-nogit-XXXXXX)"
 cd "$TEST_DIR" || exit 1
 source "$SCRIPT_DIR/git-toolkit.sh"
 
-if ! output=$(echo "n" | git-stash 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
-    echo -e "${GREEN}[PASS]${NC} git-stash correctly detected not in git repository"
+if ! output=$(echo "n" | git_stash 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
+    echo -e "${GREEN}[PASS]${NC} git_stash correctly detected not in git repository"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-stash should have detected not in git repository. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_stash should have detected not in git repository. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cd "$SCRIPT_DIR"
 rm -rf "$TEST_DIR"
 
-# Test 12: git-stash - Repository with no commits
-echo -e "${YELLOW}[TEST]${NC} git-stash: Repository with no commits"
+# Test 12: git_stash - Repository with no commits
+echo -e "${YELLOW}[TEST]${NC} git_stash: Repository with no commits"
 TEST_DIR="$TEST_BASE_DIR/test-stash-nocommits-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -576,17 +576,17 @@ git config user.name "Test User"
 git config user.email "test@example.com"
 source "$SCRIPT_DIR/git-toolkit.sh"
 
-if ! output=$(git-stash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
-    echo -e "${GREEN}[PASS]${NC} git-stash correctly detected repository with no commits"
+if ! output=$(git_stash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
+    echo -e "${GREEN}[PASS]${NC} git_stash correctly detected repository with no commits"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-stash should have detected repository with no commits. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_stash should have detected repository with no commits. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 13: git-stash - Clean working directory
-echo -e "${YELLOW}[TEST]${NC} git-stash: Clean working directory"
+# Test 13: git_stash - Clean working directory
+echo -e "${YELLOW}[TEST]${NC} git_stash: Clean working directory"
 TEST_DIR="$TEST_BASE_DIR/test-stash-clean-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -599,17 +599,17 @@ echo "test" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
-if output=$(git-stash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "No changes to stash (working directory is clean)"; then
-    echo -e "${GREEN}[PASS]${NC} git-stash correctly detected clean working directory"
+if output=$(git_stash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "No changes to stash (working directory is clean)"; then
+    echo -e "${GREEN}[PASS]${NC} git_stash correctly detected clean working directory"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-stash should have detected clean working directory. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_stash should have detected clean working directory. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 14: git-stash - Cancel stash operation
-echo -e "${YELLOW}[TEST]${NC} git-stash: Cancel stash operation"
+# Test 14: git_stash - Cancel stash operation
+echo -e "${YELLOW}[TEST]${NC} git_stash: Cancel stash operation"
 TEST_DIR="$TEST_BASE_DIR/test-stash-cancel-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -625,23 +625,23 @@ git commit -m "Initial commit" > /dev/null 2>&1
 echo "modified" > file1.txt
 echo "new file" > file2.txt
 
-if echo "n" | git-stash 2>&1 | grep -q "Stash cancelled"; then
+if echo "n" | git_stash 2>&1 | grep -q "Stash cancelled"; then
     # Check that files are still present
     if [ -f file2.txt ] && [ "$(cat file1.txt)" = "modified" ]; then
-        echo -e "${GREEN}[PASS]${NC} git-stash cancel operation works correctly"
+        echo -e "${GREEN}[PASS]${NC} git_stash cancel operation works correctly"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
         echo -e "${RED}[FAIL]${NC} Files were stashed despite cancellation"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-stash cancel operation failed"
+    echo -e "${RED}[FAIL]${NC} git_stash cancel operation failed"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 15: git-stash - Normal stash operation with modified files
-echo -e "${YELLOW}[TEST]${NC} git-stash: Normal stash with modified files"
+# Test 15: git_stash - Normal stash operation with modified files
+echo -e "${YELLOW}[TEST]${NC} git_stash: Normal stash with modified files"
 TEST_DIR="$TEST_BASE_DIR/test-stash-modified-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -656,13 +656,13 @@ git commit -m "Initial commit" > /dev/null 2>&1
 
 echo "modified" > file1.txt
 
-output=$(echo "y" | git-stash 2>&1)
+output=$(echo "y" | git_stash 2>&1)
 exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
     # Check if working directory is clean (file1.txt should be back to original content)
     if git diff-index --quiet HEAD; then
-        echo -e "${GREEN}[PASS]${NC} git-stash cleaned working directory"
+        echo -e "${GREEN}[PASS]${NC} git_stash cleaned working directory"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
         echo -e "${RED}[FAIL]${NC} Working directory not clean after stash"
@@ -671,21 +671,21 @@ if [ $exit_code -eq 0 ]; then
     
     # Check if stash was created
     if git stash list | grep -q "stash.*-"; then
-        echo -e "${GREEN}[PASS]${NC} git-stash created stash with correct message"
+        echo -e "${GREEN}[PASS]${NC} git_stash created stash with correct message"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-stash did not create stash or has wrong message"
+        echo -e "${RED}[FAIL]${NC} git_stash did not create stash or has wrong message"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-stash operation failed with exit code $exit_code"
+    echo -e "${RED}[FAIL]${NC} git_stash operation failed with exit code $exit_code"
     echo -e "${YELLOW}[DEBUG]${NC} Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 16: git-stash - Stash with untracked files
-echo -e "${YELLOW}[TEST]${NC} git-stash: Stash with untracked files"
+# Test 16: git_stash - Stash with untracked files
+echo -e "${YELLOW}[TEST]${NC} git_stash: Stash with untracked files"
 TEST_DIR="$TEST_BASE_DIR/test-stash-untracked-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -701,32 +701,32 @@ git commit -m "Initial commit" > /dev/null 2>&1
 echo "modified" > file1.txt
 echo "untracked" > untracked.txt
 
-if echo "y" | git-stash > /dev/null 2>&1; then
+if echo "y" | git_stash > /dev/null 2>&1; then
     # Check if both tracked and untracked files are gone
     if [ "$(cat file1.txt)" = "initial" ] && [ ! -f untracked.txt ]; then
-        echo -e "${GREEN}[PASS]${NC} git-stash handled both modified and untracked files"
+        echo -e "${GREEN}[PASS]${NC} git_stash handled both modified and untracked files"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-stash did not properly handle all file types"
+        echo -e "${RED}[FAIL]${NC} git_stash did not properly handle all file types"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
     
     # Verify untracked file is in stash
     if git stash show --include-untracked "stash@{0}" --name-only | grep -q "untracked.txt"; then
-        echo -e "${GREEN}[PASS]${NC} git-stash included untracked files in stash"
+        echo -e "${GREEN}[PASS]${NC} git_stash included untracked files in stash"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-stash did not include untracked files in stash"
+        echo -e "${RED}[FAIL]${NC} git_stash did not include untracked files in stash"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-stash with untracked files failed"
+    echo -e "${RED}[FAIL]${NC} git_stash with untracked files failed"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 17: git-stash - Stash with staged files
-echo -e "${YELLOW}[TEST]${NC} git-stash: Stash with staged files"
+# Test 17: git_stash - Stash with staged files
+echo -e "${YELLOW}[TEST]${NC} git_stash: Stash with staged files"
 TEST_DIR="$TEST_BASE_DIR/test-stash-staged-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -743,23 +743,23 @@ echo "modified" > file1.txt
 echo "staged" > staged.txt
 git add staged.txt
 
-if echo "y" | git-stash > /dev/null 2>&1; then
+if echo "y" | git_stash > /dev/null 2>&1; then
     # Check if staged files are gone and index is clean
     if git diff-index --quiet --cached HEAD && [ ! -f staged.txt ]; then
-        echo -e "${GREEN}[PASS]${NC} git-stash handled staged files correctly"
+        echo -e "${GREEN}[PASS]${NC} git_stash handled staged files correctly"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-stash did not properly handle staged files"
+        echo -e "${RED}[FAIL]${NC} git_stash did not properly handle staged files"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-stash with staged files failed"
+    echo -e "${RED}[FAIL]${NC} git_stash with staged files failed"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 18: git-stash - Complex scenario with all file types
-echo -e "${YELLOW}[TEST]${NC} git-stash: Complex scenario with all file types"
+# Test 18: git_stash - Complex scenario with all file types
+echo -e "${YELLOW}[TEST]${NC} git_stash: Complex scenario with all file types"
 TEST_DIR="$TEST_BASE_DIR/test-stash-complex-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -778,23 +778,23 @@ echo "staged content" > staged.txt   # New staged file
 git add staged.txt
 echo "untracked content" > untracked.txt  # Untracked file
 
-if echo "y" | git-stash > /dev/null 2>&1; then
+if echo "y" | git_stash > /dev/null 2>&1; then
     # Verify working directory is completely clean
     if git diff-index --quiet HEAD && git diff-index --quiet --cached HEAD && [ -z "$(git ls-files --others --exclude-standard)" ]; then
-        echo -e "${GREEN}[PASS]${NC} git-stash completely cleaned complex working directory"
+        echo -e "${GREEN}[PASS]${NC} git_stash completely cleaned complex working directory"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-stash did not completely clean working directory"
+        echo -e "${RED}[FAIL]${NC} git_stash did not completely clean working directory"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
     
     # Verify all files can be restored
     if git stash apply "stash@{0}" > /dev/null 2>&1; then
         if [ "$(cat file1.txt)" = "modified content" ] && [ "$(cat staged.txt)" = "staged content" ] && [ "$(cat untracked.txt)" = "untracked content" ]; then
-            echo -e "${GREEN}[PASS]${NC} git-stash preserved all file types correctly"
+            echo -e "${GREEN}[PASS]${NC} git_stash preserved all file types correctly"
             PASS_COUNT=$((PASS_COUNT + 1))
         else
-            echo -e "${RED}[FAIL]${NC} git-stash did not preserve all file contents correctly"
+            echo -e "${RED}[FAIL]${NC} git_stash did not preserve all file contents correctly"
             FAIL_COUNT=$((FAIL_COUNT + 1))
         fi
     else
@@ -802,35 +802,35 @@ if echo "y" | git-stash > /dev/null 2>&1; then
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-stash complex scenario failed"
+    echo -e "${RED}[FAIL]${NC} git_stash complex scenario failed"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
 echo
 echo "=========================================="
-echo "TESTING: git-clean-branches function"
+echo "TESTING: git_clean_branches function"
 echo "=========================================="
 
-# Test 19: git-clean-branches - Not in git repository
-echo -e "${YELLOW}[TEST]${NC} git-clean-branches: Not in git repository"
+# Test 19: git_clean_branches - Not in git repository
+echo -e "${YELLOW}[TEST]${NC} git_clean_branches: Not in git repository"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-clean-nogit-XXXXXX)"
 cd "$TEST_DIR" || exit 1
 source "$SCRIPT_DIR/git-toolkit.sh"
 
-if ! output=$(git-clean-branches $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
-    echo -e "${GREEN}[PASS]${NC} git-clean-branches correctly detected not in git repository"
+if ! output=$(git_clean_branches $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
+    echo -e "${GREEN}[PASS]${NC} git_clean_branches correctly detected not in git repository"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-clean-branches should have detected not in git repository. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_clean_branches should have detected not in git repository. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cd "$SCRIPT_DIR"
 rm -rf "$TEST_DIR"
 
-# Test 20: git-clean-branches - Repository with no commits
-echo -e "${YELLOW}[TEST]${NC} git-clean-branches: Repository with no commits"
+# Test 20: git_clean_branches - Repository with no commits
+echo -e "${YELLOW}[TEST]${NC} git_clean_branches: Repository with no commits"
 TEST_DIR="$TEST_BASE_DIR/test-clean-nocommits-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -839,17 +839,17 @@ git config user.name "Test User"
 git config user.email "test@example.com"
 source "$SCRIPT_DIR/git-toolkit.sh"
 
-if ! output=$(git-clean-branches $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
-    echo -e "${GREEN}[PASS]${NC} git-clean-branches correctly detected repository with no commits"
+if ! output=$(git_clean_branches $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
+    echo -e "${GREEN}[PASS]${NC} git_clean_branches correctly detected repository with no commits"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-clean-branches should have detected repository with no commits. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_clean_branches should have detected repository with no commits. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 21: git-clean-branches - No branches to clean
-echo -e "${YELLOW}[TEST]${NC} git-clean-branches: No branches to clean"
+# Test 21: git_clean_branches - No branches to clean
+echo -e "${YELLOW}[TEST]${NC} git_clean_branches: No branches to clean"
 TEST_DIR="$TEST_BASE_DIR/test-clean-none-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -862,17 +862,17 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
-if output=$(git-clean-branches $DEBUG_MODE 2>&1) && echo "$output" | grep -q "No branches to clean up"; then
-    echo -e "${GREEN}[PASS]${NC} git-clean-branches correctly detected no branches to clean"
+if output=$(git_clean_branches $DEBUG_MODE 2>&1) && echo "$output" | grep -q "No branches to clean up"; then
+    echo -e "${GREEN}[PASS]${NC} git_clean_branches correctly detected no branches to clean"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-clean-branches should have detected no branches to clean. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_clean_branches should have detected no branches to clean. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 22: git-clean-branches - Cancel operation
-echo -e "${YELLOW}[TEST]${NC} git-clean-branches: Cancel operation"
+# Test 22: git_clean_branches - Cancel operation
+echo -e "${YELLOW}[TEST]${NC} git_clean_branches: Cancel operation"
 TEST_DIR="$TEST_BASE_DIR/test-clean-cancel-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -893,23 +893,23 @@ git commit -m "Add feature" > /dev/null 2>&1
 git checkout main > /dev/null 2>&1
 git merge feature-branch > /dev/null 2>&1
 
-if echo "n" | git-clean-branches 2>&1 | grep -q "Branch cleanup cancelled"; then
+if echo "n" | git_clean_branches 2>&1 | grep -q "Branch cleanup cancelled"; then
     # Verify the merged branch still exists
     if git branch | grep -q "feature-branch"; then
-        echo -e "${GREEN}[PASS]${NC} git-clean-branches cancel operation works correctly"
+        echo -e "${GREEN}[PASS]${NC} git_clean_branches cancel operation works correctly"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
         echo -e "${RED}[FAIL]${NC} Branch was deleted despite cancellation"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-clean-branches cancel operation failed"
+    echo -e "${RED}[FAIL]${NC} git_clean_branches cancel operation failed"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 23: git-clean-branches - Clean merged branches
-echo -e "${YELLOW}[TEST]${NC} git-clean-branches: Clean merged branches"
+# Test 23: git_clean_branches - Clean merged branches
+echo -e "${YELLOW}[TEST]${NC} git_clean_branches: Clean merged branches"
 TEST_DIR="$TEST_BASE_DIR/test-clean-merged-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -937,32 +937,32 @@ git commit -m "Add feature 2" > /dev/null 2>&1
 git checkout main > /dev/null 2>&1
 git merge feature-2 > /dev/null 2>&1
 
-if echo "y" | git-clean-branches > /dev/null 2>&1; then
+if echo "y" | git_clean_branches > /dev/null 2>&1; then
     # Verify merged branches are deleted
     if ! git branch | grep -qE "feature-[12]"; then
-        echo -e "${GREEN}[PASS]${NC} git-clean-branches successfully cleaned merged branches"
+        echo -e "${GREEN}[PASS]${NC} git_clean_branches successfully cleaned merged branches"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-clean-branches did not clean all merged branches"
+        echo -e "${RED}[FAIL]${NC} git_clean_branches did not clean all merged branches"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
     
     # Verify main branch still exists
     if git branch | grep -q "main"; then
-        echo -e "${GREEN}[PASS]${NC} git-clean-branches preserved main branch"
+        echo -e "${GREEN}[PASS]${NC} git_clean_branches preserved main branch"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-clean-branches deleted main branch"
+        echo -e "${RED}[FAIL]${NC} git_clean_branches deleted main branch"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-clean-branches failed to execute"
+    echo -e "${RED}[FAIL]${NC} git_clean_branches failed to execute"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 24: git-clean-branches - Protect current branch
-echo -e "${YELLOW}[TEST]${NC} git-clean-branches: Protect current branch"
+# Test 24: git_clean_branches - Protect current branch
+echo -e "${YELLOW}[TEST]${NC} git_clean_branches: Protect current branch"
 TEST_DIR="$TEST_BASE_DIR/test-clean-protect-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -993,23 +993,23 @@ git merge other-feature > /dev/null 2>&1
 git checkout current-feature > /dev/null 2>&1
 
 # Run cleanup - should not delete current-feature even if it appears merged
-if echo "y" | git-clean-branches > /dev/null 2>&1; then
+if echo "y" | git_clean_branches > /dev/null 2>&1; then
     # Verify current branch is protected
     if git branch | grep -q "current-feature"; then
-        echo -e "${GREEN}[PASS]${NC} git-clean-branches protected current branch"
+        echo -e "${GREEN}[PASS]${NC} git_clean_branches protected current branch"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-clean-branches deleted current branch"
+        echo -e "${RED}[FAIL]${NC} git_clean_branches deleted current branch"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-clean-branches failed to execute"
+    echo -e "${RED}[FAIL]${NC} git_clean_branches failed to execute"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 25: git-clean-branches - Handle unmerged branches
-echo -e "${YELLOW}[TEST]${NC} git-clean-branches: Handle unmerged branches"
+# Test 25: git_clean_branches - Handle unmerged branches
+echo -e "${YELLOW}[TEST]${NC} git_clean_branches: Handle unmerged branches"
 TEST_DIR="$TEST_BASE_DIR/test-clean-unmerged-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1037,66 +1037,66 @@ git commit -m "Merged feature work" > /dev/null 2>&1
 git checkout main > /dev/null 2>&1
 git merge merged-feature > /dev/null 2>&1
 
-output=$(echo "y" | git-clean-branches 2>&1)
+output=$(echo "y" | git_clean_branches 2>&1)
 exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
     # Verify unmerged branch still exists
     if git branch | grep -q "unmerged-feature"; then
-        echo -e "${GREEN}[PASS]${NC} git-clean-branches protected unmerged branch"
+        echo -e "${GREEN}[PASS]${NC} git_clean_branches protected unmerged branch"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-clean-branches deleted unmerged branch"
+        echo -e "${RED}[FAIL]${NC} git_clean_branches deleted unmerged branch"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
     
     # Verify merged branch was deleted (check the output since it's more reliable)
     if echo "$output" | grep -q "✓ Deleted branch: merged-feature"; then
-        echo -e "${GREEN}[PASS]${NC} git-clean-branches deleted merged branch"
+        echo -e "${GREEN}[PASS]${NC} git_clean_branches deleted merged branch"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-clean-branches did not delete merged branch"
+        echo -e "${RED}[FAIL]${NC} git_clean_branches did not delete merged branch"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
     
     # Check if unmerged branch is properly handled (not in delete list)
     if ! echo "$output" | grep -q "unmerged-feature"; then
-        echo -e "${GREEN}[PASS]${NC} git-clean-branches properly handled unmerged branch"
+        echo -e "${GREEN}[PASS]${NC} git_clean_branches properly handled unmerged branch"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-clean-branches did not handle unmerged branch correctly"
+        echo -e "${RED}[FAIL]${NC} git_clean_branches did not handle unmerged branch correctly"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-clean-branches failed to execute. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_clean_branches failed to execute. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
 echo
 echo "=========================================="
-echo "TESTING: git-redo function"
+echo "TESTING: git_redo function"
 echo "=========================================="
 
-# Test 26: git-redo - Not in git repository
-echo -e "${YELLOW}[TEST]${NC} git-redo: Not in git repository"
+# Test 26: git_redo - Not in git repository
+echo -e "${YELLOW}[TEST]${NC} git_redo: Not in git repository"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-redo-nogit-XXXXXX)"
 cd "$TEST_DIR" || exit 1
 source "$SCRIPT_DIR/git-toolkit.sh"
 
-if ! output=$(git-redo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
-    echo -e "${GREEN}[PASS]${NC} git-redo correctly detected not in git repository"
+if ! output=$(git_redo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
+    echo -e "${GREEN}[PASS]${NC} git_redo correctly detected not in git repository"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-redo should have detected not in git repository. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_redo should have detected not in git repository. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cd "$SCRIPT_DIR"
 rm -rf "$TEST_DIR"
 
-# Test 27: git-redo - Repository with no commits
-echo -e "${YELLOW}[TEST]${NC} git-redo: Repository with no commits"
+# Test 27: git_redo - Repository with no commits
+echo -e "${YELLOW}[TEST]${NC} git_redo: Repository with no commits"
 TEST_DIR="$TEST_BASE_DIR/test-redo-nocommits-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1105,17 +1105,17 @@ git config user.name "Test User"
 git config user.email "test@example.com"
 source "$SCRIPT_DIR/git-toolkit.sh"
 
-if ! output=$(git-redo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
-    echo -e "${GREEN}[PASS]${NC} git-redo correctly detected repository with no commits"
+if ! output=$(git_redo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
+    echo -e "${GREEN}[PASS]${NC} git_redo correctly detected repository with no commits"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-redo should have detected repository with no commits. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_redo should have detected repository with no commits. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 28: git-redo - No undo stashes available
-echo -e "${YELLOW}[TEST]${NC} git-redo: No undo stashes available"
+# Test 28: git_redo - No undo stashes available
+echo -e "${YELLOW}[TEST]${NC} git_redo: No undo stashes available"
 TEST_DIR="$TEST_BASE_DIR/test-redo-nostashes-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1128,17 +1128,17 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
-if output=$(git-redo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "No undo stashes found to redo"; then
-    echo -e "${GREEN}[PASS]${NC} git-redo correctly detected no undo stashes"
+if output=$(git_redo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "No undo stashes found to redo"; then
+    echo -e "${GREEN}[PASS]${NC} git_redo correctly detected no undo stashes"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-redo should have detected no undo stashes. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_redo should have detected no undo stashes. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 29: git-redo - Dirty working directory
-echo -e "${YELLOW}[TEST]${NC} git-redo: Dirty working directory"
+# Test 29: git_redo - Dirty working directory
+echo -e "${YELLOW}[TEST]${NC} git_redo: Dirty working directory"
 TEST_DIR="$TEST_BASE_DIR/test-redo-dirty-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1156,22 +1156,22 @@ git add file2.txt
 git commit -m "Second commit" > /dev/null 2>&1
 
 # Undo the commit first
-echo "y" | git-undo > /dev/null 2>&1
+echo "y" | git_undo > /dev/null 2>&1
 
 # Make working directory dirty
 echo "dirty" > file3.txt
 
-if ! output=$(git-redo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Working directory is not clean"; then
-    echo -e "${GREEN}[PASS]${NC} git-redo correctly detected dirty working directory"
+if ! output=$(git_redo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Working directory is not clean"; then
+    echo -e "${GREEN}[PASS]${NC} git_redo correctly detected dirty working directory"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-redo should have detected dirty working directory. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_redo should have detected dirty working directory. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 30: git-redo - Cancel redo operation
-echo -e "${YELLOW}[TEST]${NC} git-redo: Cancel redo operation"
+# Test 30: git_redo - Cancel redo operation
+echo -e "${YELLOW}[TEST]${NC} git_redo: Cancel redo operation"
 TEST_DIR="$TEST_BASE_DIR/test-redo-cancel-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1189,29 +1189,29 @@ git add file2.txt
 git commit -m "Second commit" > /dev/null 2>&1
 
 # Undo the commit first
-echo "y" | git-undo > /dev/null 2>&1
+echo "y" | git_undo > /dev/null 2>&1
 
 # Test cancellation at selection stage
-if echo -e "q" | git-redo 2>&1 | grep -q "Redo cancelled"; then
-    echo -e "${GREEN}[PASS]${NC} git-redo cancel at selection works correctly"
+if echo -e "q" | git_redo 2>&1 | grep -q "Redo cancelled"; then
+    echo -e "${GREEN}[PASS]${NC} git_redo cancel at selection works correctly"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-redo cancel at selection failed"
+    echo -e "${RED}[FAIL]${NC} git_redo cancel at selection failed"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 
 # Test cancellation at confirmation stage
-if echo -e "1\nn" | git-redo 2>&1 | grep -q "Redo cancelled"; then
-    echo -e "${GREEN}[PASS]${NC} git-redo cancel at confirmation works correctly"
+if echo -e "1\nn" | git_redo 2>&1 | grep -q "Redo cancelled"; then
+    echo -e "${GREEN}[PASS]${NC} git_redo cancel at confirmation works correctly"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-redo cancel at confirmation failed"
+    echo -e "${RED}[FAIL]${NC} git_redo cancel at confirmation failed"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 31: git-redo - Successful redo operation
-echo -e "${YELLOW}[TEST]${NC} git-redo: Successful redo operation"
+# Test 31: git_redo - Successful redo operation
+echo -e "${YELLOW}[TEST]${NC} git_redo: Successful redo operation"
 TEST_DIR="$TEST_BASE_DIR/test-redo-success-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1229,7 +1229,7 @@ git add file2.txt
 git commit -m "Second commit to undo and redo" > /dev/null 2>&1
 
 # Undo the commit first
-echo "y" | git-undo > /dev/null 2>&1
+echo "y" | git_undo > /dev/null 2>&1
 
 # Verify file is gone after undo
 if [ ! -f file2.txt ]; then
@@ -1241,54 +1241,54 @@ else
 fi
 
 # Now redo the commit
-if echo -e "1\ny" | git-redo > /dev/null 2>&1; then
+if echo -e "1\ny" | git_redo > /dev/null 2>&1; then
     # Verify file is back after redo
     if [ -f file2.txt ] && [ "$(cat file2.txt)" = "second content" ]; then
-        echo -e "${GREEN}[PASS]${NC} git-redo successfully restored changes"
+        echo -e "${GREEN}[PASS]${NC} git_redo successfully restored changes"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-redo did not restore changes correctly"
+        echo -e "${RED}[FAIL]${NC} git_redo did not restore changes correctly"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
     
     # Verify working directory has changes ready to commit
     if ! git diff-index --quiet HEAD; then
-        echo -e "${GREEN}[PASS]${NC} git-redo left changes in working directory"
+        echo -e "${GREEN}[PASS]${NC} git_redo left changes in working directory"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-redo did not restore changes to working directory"
+        echo -e "${RED}[FAIL]${NC} git_redo did not restore changes to working directory"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-redo operation failed"
+    echo -e "${RED}[FAIL]${NC} git_redo operation failed"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
 echo
 echo "=========================================="
-echo "TESTING: git-squash function"
+echo "TESTING: git_squash function"
 echo "=========================================="
 
-# Test 32: git-squash - Not in git repository
-echo -e "${YELLOW}[TEST]${NC} git-squash: Not in git repository"
+# Test 32: git_squash - Not in git repository
+echo -e "${YELLOW}[TEST]${NC} git_squash: Not in git repository"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-squash-nogit-XXXXXX)"
 cd "$TEST_DIR" || exit 1
 source "$SCRIPT_DIR/git-toolkit.sh"
 
-if ! output=$(git-squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
-    echo -e "${GREEN}[PASS]${NC} git-squash correctly detected not in git repository"
+if ! output=$(git_squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
+    echo -e "${GREEN}[PASS]${NC} git_squash correctly detected not in git repository"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-squash should have detected not in git repository. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_squash should have detected not in git repository. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cd "$SCRIPT_DIR"
 rm -rf "$TEST_DIR"
 
-# Test 33: git-squash - Repository with no commits
-echo -e "${YELLOW}[TEST]${NC} git-squash: Repository with no commits"
+# Test 33: git_squash - Repository with no commits
+echo -e "${YELLOW}[TEST]${NC} git_squash: Repository with no commits"
 TEST_DIR="$TEST_BASE_DIR/test-squash-nocommits-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1297,17 +1297,17 @@ git config user.name "Test User"
 git config user.email "test@example.com"
 source "$SCRIPT_DIR/git-toolkit.sh"
 
-if ! output=$(git-squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
-    echo -e "${GREEN}[PASS]${NC} git-squash correctly detected repository with no commits"
+if ! output=$(git_squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
+    echo -e "${GREEN}[PASS]${NC} git_squash correctly detected repository with no commits"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-squash should have detected repository with no commits. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_squash should have detected repository with no commits. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 34: git-squash - Dirty working directory
-echo -e "${YELLOW}[TEST]${NC} git-squash: Dirty working directory"
+# Test 34: git_squash - Dirty working directory
+echo -e "${YELLOW}[TEST]${NC} git_squash: Dirty working directory"
 TEST_DIR="$TEST_BASE_DIR/test-squash-dirty-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1327,17 +1327,17 @@ git commit -m "Add feature" > /dev/null 2>&1
 
 echo "dirty" > dirty.txt  # Uncommitted change
 
-if ! output=$(git-squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Working directory is not clean"; then
-    echo -e "${GREEN}[PASS]${NC} git-squash correctly detected dirty working directory"
+if ! output=$(git_squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Working directory is not clean"; then
+    echo -e "${GREEN}[PASS]${NC} git_squash correctly detected dirty working directory"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-squash should have detected dirty working directory. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_squash should have detected dirty working directory. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 35: git-squash - On main branch
-echo -e "${YELLOW}[TEST]${NC} git-squash: On main branch"
+# Test 35: git_squash - On main branch
+echo -e "${YELLOW}[TEST]${NC} git_squash: On main branch"
 TEST_DIR="$TEST_BASE_DIR/test-squash-main-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1350,17 +1350,17 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
-if ! output=$(git-squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Cannot squash commits on main/master/develop branch"; then
-    echo -e "${GREEN}[PASS]${NC} git-squash correctly prevented squashing on main branch"
+if ! output=$(git_squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Cannot squash commits on main/master/develop branch"; then
+    echo -e "${GREEN}[PASS]${NC} git_squash correctly prevented squashing on main branch"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-squash should have prevented squashing on main branch. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_squash should have prevented squashing on main branch. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 36: git-squash - Only one commit on branch
-echo -e "${YELLOW}[TEST]${NC} git-squash: Only one commit on branch"
+# Test 36: git_squash - Only one commit on branch
+echo -e "${YELLOW}[TEST]${NC} git_squash: Only one commit on branch"
 TEST_DIR="$TEST_BASE_DIR/test-squash-onecommit-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1378,17 +1378,17 @@ echo "feature" > feature.txt
 git add feature.txt
 git commit -m "Add feature" > /dev/null 2>&1
 
-if ! output=$(git-squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Only one commit on branch, nothing to squash"; then
-    echo -e "${GREEN}[PASS]${NC} git-squash correctly detected only one commit"
+if ! output=$(git_squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Only one commit on branch, nothing to squash"; then
+    echo -e "${GREEN}[PASS]${NC} git_squash correctly detected only one commit"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-squash should have detected only one commit. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_squash should have detected only one commit. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 37: git-squash - Cancel squash operation
-echo -e "${YELLOW}[TEST]${NC} git-squash: Cancel squash operation"
+# Test 37: git_squash - Cancel squash operation
+echo -e "${YELLOW}[TEST]${NC} git_squash: Cancel squash operation"
 TEST_DIR="$TEST_BASE_DIR/test-squash-cancel-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1410,23 +1410,23 @@ echo "second" > second.txt
 git add second.txt
 git commit -m "Second feature" > /dev/null 2>&1
 
-if echo "n" | git-squash 2>&1 | grep -q "Squash cancelled"; then
+if echo "n" | git_squash 2>&1 | grep -q "Squash cancelled"; then
     # Verify commits are still there
     if [ "$(git rev-list --count HEAD)" -eq 3 ]; then
-        echo -e "${GREEN}[PASS]${NC} git-squash cancel operation works correctly"
+        echo -e "${GREEN}[PASS]${NC} git_squash cancel operation works correctly"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
         echo -e "${RED}[FAIL]${NC} Commits were squashed despite cancellation"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-squash cancel operation failed"
+    echo -e "${RED}[FAIL]${NC} git_squash cancel operation failed"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 38: git-squash - Successful squash operation
-echo -e "${YELLOW}[TEST]${NC} git-squash: Successful squash operation"
+# Test 38: git_squash - Successful squash operation
+echo -e "${YELLOW}[TEST]${NC} git_squash: Successful squash operation"
 TEST_DIR="$TEST_BASE_DIR/test-squash-success-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1452,13 +1452,13 @@ echo "third feature content" > third.txt
 git add third.txt
 git commit -m "Third feature commit" > /dev/null 2>&1
 
-# Skip git-squash success test due to editor complexity - would require interactive input
-echo -e "${GREEN}[PASS]${NC} git-squash function defined and preview works (interactive test skipped)"
+# Skip git_squash success test due to editor complexity - would require interactive input
+echo -e "${GREEN}[PASS]${NC} git_squash function defined and preview works (interactive test skipped)"
 PASS_COUNT=$((PASS_COUNT + 1))
 cleanup_test_repo "$TEST_DIR"
 
-# Test 39: git-squash - No base branch found
-echo -e "${YELLOW}[TEST]${NC} git-squash: No base branch found"
+# Test 39: git_squash - No base branch found
+echo -e "${YELLOW}[TEST]${NC} git_squash: No base branch found"
 TEST_DIR="$TEST_BASE_DIR/test-squash-nobase-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1483,39 +1483,39 @@ echo "second" > second.txt
 git add second.txt
 git commit -m "Second commit" > /dev/null 2>&1
 
-if ! output=$(git-squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Could not find base branch"; then
-    echo -e "${GREEN}[PASS]${NC} git-squash correctly detected no base branch"
+if ! output=$(git_squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Could not find base branch"; then
+    echo -e "${GREEN}[PASS]${NC} git_squash correctly detected no base branch"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-squash should have detected no base branch. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_squash should have detected no base branch. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
 echo
 echo "=========================================="
-echo "TESTING: git-status function"
+echo "TESTING: git_status function"
 echo "=========================================="
 
-# Test 40: git-status - Not in git repository
-echo -e "${YELLOW}[TEST]${NC} git-status: Not in git repository"
+# Test 40: git_status - Not in git repository
+echo -e "${YELLOW}[TEST]${NC} git_status: Not in git repository"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-show-nogit-XXXXXX)"
 cd "$TEST_DIR" || exit 1
 source "$SCRIPT_DIR/git-toolkit.sh"
 
-if ! output=$(git-status $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
-    echo -e "${GREEN}[PASS]${NC} git-status correctly detected not in git repository"
+if ! output=$(git_status $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
+    echo -e "${GREEN}[PASS]${NC} git_status correctly detected not in git repository"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-status should have detected not in git repository. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status should have detected not in git repository. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cd "$SCRIPT_DIR"
 rm -rf "$TEST_DIR"
 
-# Test 41: git-status - Repository with no commits
-echo -e "${YELLOW}[TEST]${NC} git-status: Repository with no commits"
+# Test 41: git_status - Repository with no commits
+echo -e "${YELLOW}[TEST]${NC} git_status: Repository with no commits"
 TEST_DIR="$TEST_BASE_DIR/test-show-nocommits-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1524,17 +1524,17 @@ git config user.name "Test User"
 git config user.email "test@example.com"
 source "$SCRIPT_DIR/git-toolkit.sh"
 
-if ! output=$(git-status $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
-    echo -e "${GREEN}[PASS]${NC} git-status correctly detected repository with no commits"
+if ! output=$(git_status $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
+    echo -e "${GREEN}[PASS]${NC} git_status correctly detected repository with no commits"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-status should have detected repository with no commits. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status should have detected repository with no commits. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 42: git-status - On main branch (show pending commits)
-echo -e "${YELLOW}[TEST]${NC} git-status: On main branch (show pending commits)"
+# Test 42: git_status - On main branch (show pending commits)
+echo -e "${YELLOW}[TEST]${NC} git_status: On main branch (show pending commits)"
 TEST_DIR="$TEST_BASE_DIR/test-show-main-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1547,17 +1547,17 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
-if output=$(git-status $DEBUG_MODE 2>&1) && echo "$output" | grep -q "total commit(s) (no remote tracking branch)"; then
-    echo -e "${GREEN}[PASS]${NC} git-status correctly showed commit count for main branch without remote"
+if output=$(git_status $DEBUG_MODE 2>&1) && echo "$output" | grep -q "total commit(s) (no remote tracking branch)"; then
+    echo -e "${GREEN}[PASS]${NC} git_status correctly showed commit count for main branch without remote"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-status should have shown commit count for main branch. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status should have shown commit count for main branch. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 43: git-status - Main branch with verbose modes
-echo -e "${YELLOW}[TEST]${NC} git-status: Main branch verbose modes"
+# Test 43: git_status - Main branch with verbose modes
+echo -e "${YELLOW}[TEST]${NC} git_status: Main branch verbose modes"
 TEST_DIR="$TEST_BASE_DIR/test-show-main-verbose-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1571,26 +1571,26 @@ git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
 # Test -v option
-if output=$(git-status $DEBUG_MODE -v 2>&1) && echo "$output" | grep -q "All commits:"; then
-    echo -e "${GREEN}[PASS]${NC} git-status -v correctly showed commits for main branch"
+if output=$(git_status $DEBUG_MODE -v 2>&1) && echo "$output" | grep -q "All commits:"; then
+    echo -e "${GREEN}[PASS]${NC} git_status -v correctly showed commits for main branch"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-status -v should have shown commits for main branch. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status -v should have shown commits for main branch. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 
 # Test -vv option
-if output=$(git-status $DEBUG_MODE -vv 2>&1) && echo "$output" | grep -q "All commits:"; then
-    echo -e "${GREEN}[PASS]${NC} git-status -vv correctly showed full commits for main branch"
+if output=$(git_status $DEBUG_MODE -vv 2>&1) && echo "$output" | grep -q "All commits:"; then
+    echo -e "${GREEN}[PASS]${NC} git_status -vv correctly showed full commits for main branch"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-status -vv should have shown full commits for main branch. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status -vv should have shown full commits for main branch. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 44: git-status - Nonexistent branch
-echo -e "${YELLOW}[TEST]${NC} git-status: Nonexistent branch"
+# Test 44: git_status - Nonexistent branch
+echo -e "${YELLOW}[TEST]${NC} git_status: Nonexistent branch"
 TEST_DIR="$TEST_BASE_DIR/test-show-nonexistent-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1603,17 +1603,17 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
-if ! output=$(git-status $DEBUG_MODE nonexistent-branch 2>&1) && echo "$output" | grep -q "Error: Branch 'nonexistent-branch' does not exist"; then
-    echo -e "${GREEN}[PASS]${NC} git-status correctly detected nonexistent branch"
+if ! output=$(git_status $DEBUG_MODE nonexistent-branch 2>&1) && echo "$output" | grep -q "Error: Branch 'nonexistent-branch' does not exist"; then
+    echo -e "${GREEN}[PASS]${NC} git_status correctly detected nonexistent branch"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-status should have detected nonexistent branch. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status should have detected nonexistent branch. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 45: git-status - Basic functionality
-echo -e "${YELLOW}[TEST]${NC} git-status: Basic functionality"
+# Test 45: git_status - Basic functionality
+echo -e "${YELLOW}[TEST]${NC} git_status: Basic functionality"
 TEST_DIR="$TEST_BASE_DIR/test-show-basic-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1637,21 +1637,21 @@ echo "feature2" > feature2.txt
 git add feature2.txt
 git commit -m "Second feature commit" > /dev/null 2>&1
 
-output=$(git-status $DEBUG_MODE 2>&1)
+output=$(git_status $DEBUG_MODE 2>&1)
 # Strip ANSI color codes for comparison
 clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
 if echo "$clean_output" | grep -q "The feature-branch branch forked from main at commit" && \
    echo "$clean_output" | grep -q "Git branch is clean"; then
-    echo -e "${GREEN}[PASS]${NC} git-status correctly identified branch fork point"
+    echo -e "${GREEN}[PASS]${NC} git_status correctly identified branch fork point"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-status failed to identify branch fork point. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status failed to identify branch fork point. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 46: git-status - With specific branch parameter
-echo -e "${YELLOW}[TEST]${NC} git-status: With specific branch parameter"
+# Test 46: git_status - With specific branch parameter
+echo -e "${YELLOW}[TEST]${NC} git_status: With specific branch parameter"
 TEST_DIR="$TEST_BASE_DIR/test-show-specific-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1674,21 +1674,21 @@ git commit -m "Feature commit" > /dev/null 2>&1
 # Switch back to main and test specifying the branch
 git checkout main > /dev/null 2>&1
 
-output=$(git-status $DEBUG_MODE feature-test 2>&1)
+output=$(git_status $DEBUG_MODE feature-test 2>&1)
 # Strip ANSI color codes for comparison
 clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
 if echo "$clean_output" | grep -q "The feature-test branch forked from main at commit" && \
    echo "$clean_output" | grep -q "Git branch is clean"; then
-    echo -e "${GREEN}[PASS]${NC} git-status correctly identified specific branch fork point"
+    echo -e "${GREEN}[PASS]${NC} git_status correctly identified specific branch fork point"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-status failed to identify specific branch fork point. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status failed to identify specific branch fork point. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 47: git-status - Verbose mode (-v)
-echo -e "${YELLOW}[TEST]${NC} git-status: Verbose mode (-v)"
+# Test 47: git_status - Verbose mode (-v)
+echo -e "${YELLOW}[TEST]${NC} git_status: Verbose mode (-v)"
 TEST_DIR="$TEST_BASE_DIR/test-show-verbose-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1712,7 +1712,7 @@ echo "feature2" > feature2.txt
 git add feature2.txt
 git commit -m "Second feature commit" > /dev/null 2>&1
 
-output=$(git-status $DEBUG_MODE -v 2>&1)
+output=$(git_status $DEBUG_MODE -v 2>&1)
 # Strip ANSI color codes for comparison
 clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
 if echo "$clean_output" | grep -q "The feature-verbose branch forked from main at commit" && \
@@ -1721,20 +1721,20 @@ if echo "$clean_output" | grep -q "The feature-verbose branch forked from main a
     # Check that both commits are shown (in oneline format)
     if echo "$clean_output" | grep -q "First feature commit" && \
        echo "$clean_output" | grep -q "Second feature commit"; then
-        echo -e "${GREEN}[PASS]${NC} git-status -v correctly showed commits since fork"
+        echo -e "${GREEN}[PASS]${NC} git_status -v correctly showed commits since fork"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-status -v did not show all commits. Output: $output"
+        echo -e "${RED}[FAIL]${NC} git_status -v did not show all commits. Output: $output"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-status -v failed to show correct format. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status -v failed to show correct format. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 48: git-status - Full verbose mode (-vv)
-echo -e "${YELLOW}[TEST]${NC} git-status: Full verbose mode (-vv)"
+# Test 48: git_status - Full verbose mode (-vv)
+echo -e "${YELLOW}[TEST]${NC} git_status: Full verbose mode (-vv)"
 TEST_DIR="$TEST_BASE_DIR/test-show-vv-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1754,7 +1754,7 @@ echo "feature" > feature.txt
 git add feature.txt
 git commit -m "Feature commit for vv test" > /dev/null 2>&1
 
-output=$(git-status $DEBUG_MODE -vv 2>&1)
+output=$(git_status $DEBUG_MODE -vv 2>&1)
 # Strip ANSI color codes for comparison
 clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
 if echo "$clean_output" | grep -q "The feature-vv branch forked from main at commit" && \
@@ -1763,20 +1763,20 @@ if echo "$clean_output" | grep -q "The feature-vv branch forked from main at com
     # Check for full commit details (author and commit message)
     if echo "$clean_output" | grep -q "Author: Test User" && \
        echo "$clean_output" | grep -q "Feature commit for vv test"; then
-        echo -e "${GREEN}[PASS]${NC} git-status -vv correctly showed full commit details"
+        echo -e "${GREEN}[PASS]${NC} git_status -vv correctly showed full commit details"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo -e "${RED}[FAIL]${NC} git-status -vv did not show full commit details. Output: $output"
+        echo -e "${RED}[FAIL]${NC} git_status -vv did not show full commit details. Output: $output"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 else
-    echo -e "${RED}[FAIL]${NC} git-status -vv failed to show correct format. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status -vv failed to show correct format. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 49: git-status - Invalid option
-echo -e "${YELLOW}[TEST]${NC} git-status: Invalid option"
+# Test 49: git_status - Invalid option
+echo -e "${YELLOW}[TEST]${NC} git_status: Invalid option"
 TEST_DIR="$TEST_BASE_DIR/test-show-invalid-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1789,18 +1789,18 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
-if ! output=$(git-status $DEBUG_MODE -x 2>&1) && echo "$output" | grep -q "Error: Unknown option '-x'" && \
-   echo "$output" | grep -q "Usage: git-status"; then
-    echo -e "${GREEN}[PASS]${NC} git-status correctly handled invalid option"
+if ! output=$(git_status $DEBUG_MODE -x 2>&1) && echo "$output" | grep -q "Error: Unknown option '-x'" && \
+   echo "$output" | grep -q "Usage: git_status"; then
+    echo -e "${GREEN}[PASS]${NC} git_status correctly handled invalid option"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-status should have detected invalid option. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status should have detected invalid option. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 50: git-status - Develop branch preference
-echo -e "${YELLOW}[TEST]${NC} git-status: Develop branch preference"
+# Test 50: git_status - Develop branch preference
+echo -e "${YELLOW}[TEST]${NC} git_status: Develop branch preference"
 TEST_DIR="$TEST_BASE_DIR/test-show-develop-$$"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR" || exit 1
@@ -1826,15 +1826,15 @@ echo "feature" > feature.txt
 git add feature.txt
 git commit -m "Feature from develop" > /dev/null 2>&1
 
-output=$(git-status $DEBUG_MODE 2>&1)
+output=$(git_status $DEBUG_MODE 2>&1)
 # Strip ANSI color codes for comparison
 clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
 if echo "$clean_output" | grep -q "The feature-from-develop branch forked from develop at commit" && \
    echo "$clean_output" | grep -q "Git branch is clean"; then
-    echo -e "${GREEN}[PASS]${NC} git-status correctly preferred develop over main"
+    echo -e "${GREEN}[PASS]${NC} git_status correctly preferred develop over main"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo -e "${RED}[FAIL]${NC} git-status should have preferred develop over main. Output: $output"
+    echo -e "${RED}[FAIL]${NC} git_status should have preferred develop over main. Output: $output"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 cleanup_test_repo "$TEST_DIR"

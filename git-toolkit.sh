@@ -156,7 +156,7 @@ _git_get_uncommitted_status() {
     fi
 }
 
-git-undo() {
+git_undo() {
     local DEBUG_MODE=""
     
     # Parse command line arguments
@@ -168,13 +168,13 @@ git-undo() {
                 ;;
             -*)
                 echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git-undo [--debug]"
+                echo "Usage: git_undo [--debug]"
                 echo "  --debug Show debug information"
                 return 1
                 ;;
             *)
                 echo "✗ Error: Unexpected argument '$1'"
-                echo "Usage: git-undo [--debug]"
+                echo "Usage: git_undo [--debug]"
                 return 1
                 ;;
         esac
@@ -274,7 +274,7 @@ git-undo() {
     echo "✓ Commit undone and changes stashed"
 }
 
-git-stash() {
+git_stash() {
     local DEBUG_MODE=""
     
     # Parse command line arguments
@@ -286,13 +286,13 @@ git-stash() {
                 ;;
             -*)
                 echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git-stash [--debug]"
+                echo "Usage: git_stash [--debug]"
                 echo "  --debug Show debug information"
                 return 1
                 ;;
             *)
                 echo "✗ Error: Unexpected argument '$1'"
-                echo "Usage: git-stash [--debug]"
+                echo "Usage: git_stash [--debug]"
                 return 1
                 ;;
         esac
@@ -375,7 +375,7 @@ git-stash() {
     echo "To restore: git stash apply $STASH_NAME"
 }
 
-git-clean-branches() {
+git_clean_branches() {
     local DEBUG_MODE=""
     
     # Parse command line arguments
@@ -387,13 +387,13 @@ git-clean-branches() {
                 ;;
             -*)
                 echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git-clean-branches [--debug]"
+                echo "Usage: git_clean_branches [--debug]"
                 echo "  --debug Show debug information"
                 return 1
                 ;;
             *)
                 echo "✗ Error: Unexpected argument '$1'"
-                echo "Usage: git-clean-branches [--debug]"
+                echo "Usage: git_clean_branches [--debug]"
                 return 1
                 ;;
         esac
@@ -495,7 +495,7 @@ git-clean-branches() {
     echo "✓ Branch cleanup completed"
 }
 
-git-redo() {
+git_redo() {
     local DEBUG_MODE=""
     
     # Parse command line arguments
@@ -507,13 +507,13 @@ git-redo() {
                 ;;
             -*)
                 echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git-redo [--debug]"
+                echo "Usage: git_redo [--debug]"
                 echo "  --debug Show debug information"
                 return 1
                 ;;
             *)
                 echo "✗ Error: Unexpected argument '$1'"
-                echo "Usage: git-redo [--debug]"
+                echo "Usage: git_redo [--debug]"
                 return 1
                 ;;
         esac
@@ -652,7 +652,7 @@ git-redo() {
     fi
 }
 
-git-squash() {
+git_squash() {
     local DEBUG_MODE=""
     
     # Parse command line arguments
@@ -664,13 +664,13 @@ git-squash() {
                 ;;
             -*)
                 echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git-squash [--debug]"
+                echo "Usage: git_squash [--debug]"
                 echo "  --debug Show debug information"
                 return 1
                 ;;
             *)
                 echo "✗ Error: Unexpected argument '$1'"
-                echo "Usage: git-squash [--debug]"
+                echo "Usage: git_squash [--debug]"
                 return 1
                 ;;
         esac
@@ -827,7 +827,7 @@ git-squash() {
     rm -f "$temp_commit_msg"
 }
 
-git-status() {
+git_status() {
     # Temporarily disable debug output
     local old_x_setting=""
     if [[ $- == *x* ]]; then
@@ -859,7 +859,7 @@ git-status() {
                 ;;
             -*)
                 echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git-status [-v|-vv] [--debug] [branch-name]"
+                echo "Usage: git_status [-v|-vv] [--debug] [branch-name]"
                 echo "  -v      Show commits since fork (feature branches) or pending commits (main/master/develop)"
                 echo "  -vv     Show full commits since fork (feature branches) or pending commits (main/master/develop)"
                 echo "  --debug Show debug information about branch detection and logic flow"
@@ -1084,3 +1084,23 @@ git-status() {
         set -x
     fi
 }
+
+# Backward compatibility aliases (for shells that support hyphenated function names)
+# These will only work in bash and similar shells, not in strict POSIX sh
+# Create aliases only if we can safely evaluate them
+if [ -n "$BASH_VERSION" ] || [ -n "$ZSH_VERSION" ]; then
+    # Use a function to safely create aliases without parse errors
+    _create_git_aliases() {
+        alias git-undo='git_undo'
+        alias git-stash='git_stash'
+        alias git-clean-branches='git_clean_branches'
+        alias git-redo='git_redo'
+        alias git-squash='git_squash'
+        alias git-status='git_status'
+    }
+    
+    # Only run if we're in an interactive shell or aliases are enabled
+    case $- in
+        *i*) _create_git_aliases ;;
+    esac
+fi
