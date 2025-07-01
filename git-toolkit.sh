@@ -217,11 +217,12 @@ git_undo() {
         return 0
     fi
 
-    local TIMESTAMP FULL_COMMIT_HASH
+    local TIMESTAMP FULL_COMMIT_HASH CURRENT_BRANCH
     TIMESTAMP=$(_git_format_timestamp)
     FULL_COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null)
+    CURRENT_BRANCH=$(_git_get_current_branch)
     
-    local STASH_MSG="undo - $TIMESTAMP - $LAST_COMMIT_SUBJECT"
+    local STASH_MSG="undo $CURRENT_BRANCH - $TIMESTAMP - $LAST_COMMIT_SUBJECT"
 
     git reset HEAD~1
     
@@ -231,7 +232,7 @@ git_undo() {
         echo "## Undo: $TIMESTAMP"
         echo ""
         echo "**Commit Hash:** $FULL_COMMIT_HASH"
-        echo "**Stash:** undo - $TIMESTAMP - $LAST_COMMIT_SUBJECT"
+        echo "**Stash:** undo $CURRENT_BRANCH - $TIMESTAMP - $LAST_COMMIT_SUBJECT"
         echo ""
         echo "### Original Commit Message:"
         echo '```'
@@ -531,14 +532,14 @@ git_redo() {
 
     # Get list of undo stashes (those created by git-undo)
     local UNDO_STASHES
-    UNDO_STASHES=$(git stash list 2>/dev/null | grep "undo -" | head -10)
+    UNDO_STASHES=$(git stash list 2>/dev/null | grep "undo " | head -10)
     
     # Debug output
     if [ "$DEBUG_MODE" = "true" ]; then
         echo "=== DEBUG MODE ==="
         echo "Working directory clean: $(git diff-index --quiet HEAD 2>/dev/null && echo "true" || echo "false")"
         echo "Total stashes: $(git stash list 2>/dev/null | wc -l)"
-        echo "Undo stashes found: $(echo "$UNDO_STASHES" | grep -c "undo -" 2>/dev/null || echo "0")"
+        echo "Undo stashes found: $(echo "$UNDO_STASHES" | grep -c "undo " 2>/dev/null || echo "0")"
         echo "=================="
     fi
     
@@ -559,19 +560,23 @@ git_redo() {
             # POSIX-compliant: Using sed instead of ${var#${var%%[![:space:]]*}} for cross-platform compatibility
             stash_msg=$(echo "$stash_line" | cut -d: -f3- | sed 's/^ *//')
             
-            # Extract timestamp and commit message from stash message
-            local timestamp commit_msg
+            # Extract branch, timestamp and commit message from stash message
+            local branch_name timestamp commit_msg
             # POSIX-compliant: Using sed for regex extraction instead of bash parameter expansion
+            # Format: "undo BRANCH - TIMESTAMP - COMMIT_MSG"
             # shellcheck disable=SC2001
-            timestamp=$(echo "$stash_msg" | sed 's/undo - \([0-9-]* [0-9:]*\) - .*/\1/')
+            branch_name=$(echo "$stash_msg" | sed 's/undo \([^ ]*\) - .*/\1/')
             # shellcheck disable=SC2001
-            commit_msg=$(echo "$stash_msg" | sed 's/undo - [0-9-]* [0-9:]* - //')
+            timestamp=$(echo "$stash_msg" | sed 's/undo [^ ]* - \([0-9-]* [0-9:]*\) - .*/\1/')
+            # shellcheck disable=SC2001
+            commit_msg=$(echo "$stash_msg" | sed 's/undo [^ ]* - [0-9-]* [0-9:]* - //')
             
             # Try to get metadata from the stash
             local metadata
             metadata=$(git stash show -p "$stash_ref" 2>/dev/null | grep -A 20 "## Undo:" | head -10 || echo "")
             
             printf "  %d. %s\n" "$stash_number" "$commit_msg"
+            printf "     Branch: %s\n" "$branch_name"
             printf "     Undone: %s\n" "$timestamp"
             if test -n "$metadata"; then
                 local original_hash
@@ -618,14 +623,18 @@ git_redo() {
     # POSIX-compliant: Using sed instead of ${var#${var%%[![:space:]]*}} for cross-platform compatibility
     selected_stash_msg=$(echo "$selected_stash_line" | cut -d: -f3- | sed 's/^ *//')
     
-    # Extract commit message for confirmation
-    local selected_commit_msg
+    # Extract branch and commit message for confirmation
+    local selected_branch_name selected_commit_msg
     # POSIX-compliant: Using sed for regex extraction instead of bash parameter expansion
+    # Format: "undo BRANCH - TIMESTAMP - COMMIT_MSG"
     # shellcheck disable=SC2001
-    selected_commit_msg=$(echo "$selected_stash_msg" | sed 's/undo - [0-9-]* [0-9:]* - //')
+    selected_branch_name=$(echo "$selected_stash_msg" | sed 's/undo \([^ ]*\) - .*/\1/')
+    # shellcheck disable=SC2001
+    selected_commit_msg=$(echo "$selected_stash_msg" | sed 's/undo [^ ]* - [0-9-]* [0-9:]* - //')
 
     echo "About to redo (restore) commit:"
     echo "  Commit: $selected_commit_msg"
+    echo "  Branch: $selected_branch_name"
     echo "  Stash: $selected_stash_ref"
     echo
 

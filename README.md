@@ -1,12 +1,14 @@
 # git-toolkit
 
-An opinionated collection of cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches while preserving your work, with a test suite to ensure safety.
+An opinionated collection of cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches while preserving your work with a test suite to ensure safety.
 
-USE AT YOUR OWN RISK! (I use them everyday, but of course, YMMV)
+The goal with these utilities is to make getting to a clean working state in any branch safe and easy, while still letting you be as creative/productive as you need to be. With these new AI coding tools (like Claude Code), I know I need to work smarter also.
+
+USE AT YOUR OWN RISK! (I use them every day, but of course, YMMV). 
 
 Built with the assistance of Claude Code. `CLAUDE.md` is included for your own review.
 
-I am on a Mac Sequoia 15.5 (Silicon) using Warp terminal. I've tried to keep these functions as portable as possible. If you have an issue, run the test script in debug mode and post an Issue on Github in this repository.
+I am on a Mac Sequoia 15.5 (Silicon) using Warp terminal. I've tried to keep these functions as portable as possible. If you have an issue, run the test script in debug mode and post an Issue on GitHub in this repository.
 
 PRs welcome!
 
@@ -112,7 +114,7 @@ git-squash
 - Opens editor to modify the commit message
 - Preserves original author, uses current date/time
 - Protects main/master/develop branches from being squashed
-- Safe rollback if editor is cancelled or fails
+- Safe rollback if editor is canceled or fails
 
 ### git-status
 Show what branch any feature branch forked from, or show pending commits for main/master/develop branches.
@@ -620,7 +622,7 @@ Debug mode provides detailed diagnostic information including:
 - **Dual functionality**: Works on both feature branches and main/master/develop branches
 - **Feature branches**: Smart base detection, automatically finds fork point from main/master/develop
 - **Main branches**: Shows pending commits since last push, or total commits if no remote
-- **Develop preference**: Chooses develop over main when distances are equal for feature branches
+- **Develop preference**: Choose develop over main when distances are equal for feature branches
 - **Verbose modes**: Optional one-line (-v) or full commit (-vv) history for both branch types
 - **Clean output**: Suppresses debug output for professional results
 - **Flexible usage**: Works with current branch or specified branch name
@@ -646,7 +648,7 @@ Debug mode provides detailed diagnostic information including:
 
 ### git-squash
 - Only works on feature branches (protects main/master/develop)
-- Requires at least 2 commits on branch to squash
+- Requires at least two (2) commits on branch to squash
 - Needs base branch (main/master/develop) to exist for comparison
 - Editor cancellation or empty message cancels the operation
 
@@ -666,7 +668,7 @@ Contributions are welcome! Please:
 
 ## Project History
 
-I prefer using a standalone Git GUI tool—my favorite is https://git-fork.com/—for most of my Git workflows. A while ago, I created a simple `git-undo` bash function to solve one of my recurring pain points. Thanks to Claude Code, I was able to expand that into a full set of “missing” Git commands I’d always wanted. With the productivity boost from working with Claude Code, these utilities have become even more valuable to me. I hope you find them useful too!
+I prefer using a standalone Git GUI tool—my favorite is https://git-fork.com/ most of my Git workflows. A while ago, I created a simple `git-undo` bash function to solve one of my recurring pain points. Thanks to Claude Code, I was able to expand that into a full set of “missing” Git commands I’d always wanted. With the productivity boost from working with Claude Code, these utilities have become even more valuable to me. I hope you find them useful too!
 
 If you do, feel free to reach out on X at @tmgbabul.
 
