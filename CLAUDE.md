@@ -35,6 +35,14 @@ This is a bash-based Git toolkit that provides six core safety-first utilities f
 # Run full test suite (63 tests across 8 categories)
 ./test-git-toolkit.sh
 
+# ALWAYS test under both bash and POSIX sh for maximum compatibility
+bash ./test-git-toolkit.sh    # Test under bash
+sh ./test-git-toolkit.sh      # Test under POSIX sh
+
+# Debug mode available for both shells
+bash ./test-git-toolkit.sh --debug
+sh ./test-git-toolkit.sh --debug
+
 # Test specific function (modify test script to run individual test blocks)
 # Tests are organized by function in the script with clear section headers
 ```
@@ -72,6 +80,8 @@ echo "source $(pwd)/git-toolkit.sh" >> ~/.bashrc
 
 **Test Requirements**: When writing or updating code, always write adequate tests and add them to `test-git-toolkit.sh`. If any tests are updated or added, always update the README.md test output section from the actual test script output (not derived), and update the test breakdown with accurate counts and categories.
 
+**Dual Shell Testing**: ALWAYS run tests under both `bash` and `sh` to ensure POSIX compatibility. Both shells must pass all 63 tests. Any code changes must be validated against both environments before considering the work complete.
+
 ## Shell Compatibility
 
 Functions use POSIX-compliant syntax with specific considerations:
@@ -85,8 +95,11 @@ Functions use POSIX-compliant syntax with specific considerations:
 - **Source Command**: POSIX sh uses `.` instead of `source`. Always use `. script.sh` for compatibility
 - **Echo Command**: `echo -e` is not portable. Use `printf` for escape sequences (e.g., `printf "1\ny\n"` instead of `echo -e "1\ny"`)
 - **Reserved Variables**: Avoid using `status` as a variable name - it's read-only in some shells. Use descriptive names like `branch_status`
+- **Default Branch Names**: Never hardcode "main" or "master" in tests. Use `$(git branch --show-current)` to detect the actual default branch name
 
 **Backward Compatibility**: For users expecting hyphenated function names, conditional aliases are created only in interactive bash/zsh shells to avoid parse errors in POSIX sh
+
+**Testing Protocol**: All changes must pass under both `bash ./test-git-toolkit.sh` and `sh ./test-git-toolkit.sh` commands
 
 ## Debug Mode and Variable Robustness
 

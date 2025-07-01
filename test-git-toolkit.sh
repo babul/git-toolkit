@@ -1644,6 +1644,9 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit on main" > /dev/null 2>&1
 
+# Capture the default branch name
+DEFAULT_BRANCH=$(get_default_branch)
+
 # Create feature branch with commits
 git checkout -b feature-branch > /dev/null 2>&1
 echo "feature1" > feature1.txt
@@ -1657,7 +1660,7 @@ git commit -m "Second feature commit" > /dev/null 2>&1
 output=$(git_status $DEBUG_MODE 2>&1)
 # Strip ANSI color codes for comparison
 clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
-if echo "$clean_output" | grep -q "The feature-branch branch forked from main at commit" && \
+if echo "$clean_output" | grep -q "The feature-branch branch forked from $DEFAULT_BRANCH at commit" && \
    echo "$clean_output" | grep -q "Git branch is clean"; then
     echo -e "${GREEN}[PASS]${NC} git_status correctly identified branch fork point"
     PASS_COUNT=$((PASS_COUNT + 1))
@@ -1697,7 +1700,7 @@ git checkout "$DEFAULT_BRANCH" > /dev/null 2>&1
 output=$(git_status $DEBUG_MODE feature-test 2>&1)
 # Strip ANSI color codes for comparison
 clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
-if echo "$clean_output" | grep -q "The feature-test branch forked from main at commit" && \
+if echo "$clean_output" | grep -q "The feature-test branch forked from $DEFAULT_BRANCH at commit" && \
    echo "$clean_output" | grep -q "Git branch is clean"; then
     echo -e "${GREEN}[PASS]${NC} git_status correctly identified specific branch fork point"
     PASS_COUNT=$((PASS_COUNT + 1))
@@ -1722,6 +1725,9 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
+# Capture the default branch name
+DEFAULT_BRANCH=$(get_default_branch)
+
 # Create feature branch with multiple commits
 git checkout -b feature-verbose > /dev/null 2>&1
 echo "feature1" > feature1.txt
@@ -1735,7 +1741,7 @@ git commit -m "Second feature commit" > /dev/null 2>&1
 output=$(git_status $DEBUG_MODE -v 2>&1)
 # Strip ANSI color codes for comparison
 clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
-if echo "$clean_output" | grep -q "The feature-verbose branch forked from main at commit" && \
+if echo "$clean_output" | grep -q "The feature-verbose branch forked from $DEFAULT_BRANCH at commit" && \
    echo "$clean_output" | grep -q "Git branch is clean" && \
    echo "$clean_output" | grep -q "Commits since fork:"; then
     # Check that both commits are shown (in oneline format)
@@ -1768,6 +1774,9 @@ echo "initial" > file1.txt
 git add file1.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
+# Capture the default branch name
+DEFAULT_BRANCH=$(get_default_branch)
+
 # Create feature branch
 git checkout -b feature-vv > /dev/null 2>&1
 echo "feature" > feature.txt
@@ -1777,7 +1786,7 @@ git commit -m "Feature commit for vv test" > /dev/null 2>&1
 output=$(git_status $DEBUG_MODE -vv 2>&1)
 # Strip ANSI color codes for comparison
 clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
-if echo "$clean_output" | grep -q "The feature-vv branch forked from main at commit" && \
+if echo "$clean_output" | grep -q "The feature-vv branch forked from $DEFAULT_BRANCH at commit" && \
    echo "$clean_output" | grep -q "Git branch is clean" && \
    echo "$clean_output" | grep -q "Commits since fork:"; then
     # Check for full commit details (author and commit message)
