@@ -1,17 +1,27 @@
 # git-toolkit
 
-A collection of safe cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches while preserving your work.
+An opinionated collection of cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches while preserving your work, with a test suite to ensure safety.
+
+USE AT YOUR OWN RISK! (I use them everyday, but of course, YMMV)
+
+Built with the assistance of Claude Code. `CLAUDE.md` is included for your own review.
+
+I am on a Mac Sequoia 15.5 (Silicon) using Warp terminal. I've tried to keep these functions as portable as possible. If you have an issue, run the test script in debug mode and post an Issue on Github in this repository.
+
+PRs welcome!
 
 ## Overview
 
-This toolkit provides four essential Git utilities:
+This toolkit provides six essential Git utilities:
 
-| Function | Purpose | Key Benefits |
-|----------|---------|--------------|
-| **`git-undo`** | Safely undo the last commit while preserving changes in a stash | Interactive preview, metadata preservation, safe rollback |
-| **`git-redo`** | Restore previously undone commits from undo stashes | Smart stash detection, interactive selection, conflict-safe |
-| **`git-stash`** | Stash all changes (including untracked files) to get a clean working directory | Complete file coverage, preview mode, guaranteed clean state |
-| **`git-clean-branches`** | Clean up merged and orphaned branches with detailed previews | Branch protection, detailed reporting, selective cleanup |
+| Function | Purpose                                                                                    | Key Benefits |
+|----------|--------------------------------------------------------------------------------------------|--------------|
+| **`git-undo`** | Safely undo the last commit while preserving changes in a stash                            | Interactive preview, metadata preservation, safe rollback |
+| **`git-redo`** | Restore previously undone commits from undo stashes                                        | Smart stash detection, interactive selection, conflict-safe |
+| **`git-stash`** | Stash all changes (including untracked and ignored files) to get a clean working directory | Complete file coverage, preview mode, guaranteed clean state |
+| **`git-clean-branches`** | Clean up merged and orphaned branches with detailed previews                               | Branch protection, detailed reporting, selective cleanup |
+| **`git-squash`** | Squash all commits in current branch into the oldest commit                                | Interactive commit message editing, preserves authorship, uses current date |
+| **`git-status`** | Show count of commits and untracked files, what branch any feature branch forked from      | Smart base detection, verbose commit history, develop preference |
 
 All functions follow the same safe pattern: show what will happen, ask for confirmation, then execute with clear feedback.
 
@@ -49,17 +59,17 @@ git-undo
 - Requires clean working directory
 
 ### git-stash  
-Stash all changes including untracked files to get a clean branch.
+Stash all changes including untracked and ignored files to get a clean branch.
 
 ```bash
 git-stash
 ```
 
 **Features:**
-- Handles modified, staged, and untracked files
+- Handles modified, staged, untracked, and ignored files
 - Shows preview of what will be stashed
-- Uses `--include-untracked` for complete cleanup
-- Timestamped stash messages for easy identification
+- Uses `--all` for complete cleanup including ignored files
+- Branch-named and timestamped stash messages for easy identification
 
 ### git-redo
 Restore previously undone commits by selecting from available undo stashes.
@@ -88,6 +98,41 @@ git-clean-branches
 - Protects current branch and main/master/develop
 - Force-deletes branches gone from remote
 - Provides guidance for unmerged branches
+
+### git-squash
+Squash all commits in the current branch into the oldest commit.
+
+```bash
+git-squash
+```
+
+**Features:**
+- Automatically finds base branch (main/master/develop)
+- Shows detailed preview of commits to be squashed
+- Opens editor to modify the commit message
+- Preserves original author, uses current date/time
+- Protects main/master/develop branches from being squashed
+- Safe rollback if editor is cancelled or fails
+
+### git-status
+Show what branch any feature branch forked from, or show pending commits for main/master/develop branches.
+
+```bash
+git-status [options] [branch-name]
+```
+
+**Options:**
+- `-v` Show commits since fork (feature branches) or pending commits (main/master/develop)
+- `-vv` Show full commits since fork (feature branches) or pending commits (main/master/develop)
+- `--debug` Show detailed diagnostic information for troubleshooting
+
+**Features:**
+- **Feature branches**: Automatically detects fork point from main/master/develop
+- **Main branches**: Shows pending commits since last push to remote
+- **No remote**: Shows total commit count when no remote tracking branch exists
+- Prefers develop over main when both are equidistant for feature branches
+- Shows commit history with verbose options for both branch types
+- Suppresses debug output for clean results
 
 ## Examples
 
@@ -137,7 +182,7 @@ You can now:
 ### git-stash
 ```bash
 $ git-stash
-Stashing all changes (including untracked files)...
+Stashing all changes (including untracked and ignored files)...
 
 Files to be stashed:
   Modified files:
@@ -150,6 +195,9 @@ Files to be stashed:
 Proceed with stashing all changes? (y/N): y
 ✓ All changes stashed successfully!
 Working directory is now clean.
+
+Changes saved in stash: stash@{0} ("stash feature-branch - 2024-01-15 10:30:00")
+To restore: git stash apply stash@{0}
 ```
 
 ### git-clean-branches
@@ -167,6 +215,101 @@ Proceed with branch cleanup? (y/N): y
 ✓ Branch cleanup completed
 ```
 
+### git-squash
+```bash
+$ git-squash
+About to squash commits:
+  Branch: feature-branch
+  Base: main
+  Commits to squash: 3
+  Into commit: a1b2c3d (Add initial feature)
+  Author: John Doe <john@example.com>
+  Date: Current date/time
+
+Commits being squashed:
+     1. a1b2c3d Add initial feature
+     2. e4f5g6h Update feature implementation
+     3. h7i8j9k Fix feature bugs
+
+Proceed with squash? (y/N): y
+Opening editor to edit commit message...
+✓ Successfully squashed 3 commits
+✓ Commit message updated
+
+Squashed commit:
+k9l0m1n Add initial feature with updates and fixes
+```
+
+### git-status
+```bash
+# Feature branch - basic usage
+$ git-status
+The feature/sentry-posthog branch forked from develop at commit 8ac50fd2
+
+# Feature branch - specific branch
+$ git-status bugfix/login-issue
+The bugfix/login-issue branch forked from main at commit 3f7a9e12
+
+# Feature branch - show commits since fork (one line each)
+$ git-status -v feature/analytics
+The feature/analytics branch forked from develop at commit 8ac50fd2
+
+Commits since fork:
+a1b2c3d Add event tracking
+e4f5g6h Configure analytics dashboard
+h7i8j9k Fix tracking bugs
+
+# Main branch - show pending commits
+$ git-status main
+The main branch has 3 pending commit(s) since last push
+
+# Main branch - show pending commits with details
+$ git-status -v main
+The main branch has 3 pending commit(s) since last push
+
+Pending commits:
+a1b2c3d Fix user authentication bug
+e4f5g6h Update documentation
+h7i8j9k Add new feature endpoint
+
+# Main branch - no remote tracking branch
+$ git-status main
+The main branch has 15 total commit(s) (no remote tracking branch)
+
+# Main branch - show all commits when no remote
+$ git-status -v main
+The main branch has 15 total commit(s) (no remote tracking branch)
+
+All commits:
+a1b2c3d Latest changes
+e4f5g6h Previous commit
+h7i8j9k Initial commit
+
+# Feature branch - full verbose mode
+$ git-status -vv feature/new-ui
+The feature/new-ui branch forked from develop at commit 8ac50fd2
+
+Commits since fork:
+commit a1b2c3d4e5f6789...
+Author: Jane Doe <jane@example.com>
+Date: Tue Jan 16 09:30:00 2024 -0500
+
+    Add new UI components
+    
+    - Implement modern button styles
+    - Add responsive navigation
+    - Update color scheme
+
+commit e4f5g6h7i8j9012...
+Author: Jane Doe <jane@example.com>
+Date: Tue Jan 16 11:15:00 2024 -0500
+
+    Refactor layout system
+    
+    - Use CSS Grid for main layout
+    - Improve mobile responsiveness
+```
+
 ### Error scenarios
 ```bash
 # Not in a git repository
@@ -180,6 +323,13 @@ $ git-undo
 # No commits to undo
 $ git-undo
 ✗ Error: Repository has no commits
+
+# git-status invalid option
+$ git-status -x
+✗ Error: Unknown option '-x'
+Usage: git-status [-v|-vv] [branch-name]
+  -v   Show commits since fork (feature branches) or pending commits (main/master/develop)
+  -vv  Show full commits since fork (feature branches) or pending commits (main/master/develop)
 ```
 
 ## Architecture & Design
@@ -210,12 +360,17 @@ Run the comprehensive test suite:
 ./test-git-toolkit.sh
 ```
 
+Run tests in debug mode for troubleshooting:
+```bash
+./test-git-toolkit.sh --debug
+```
+
 **Test coverage includes:**
-- All four functions (`git-undo`, `git-redo`, `git-stash`, `git-clean-branches`)
+- All six functions (`git-undo`, `git-redo`, `git-stash`, `git-clean-branches`, `git-squash`, `git-status`)
 - Error conditions and edge cases
 - User interaction scenarios (confirmation, cancellation)
 - Cross-platform compatibility validation
-- **42 total tests** with colored pass/fail output
+- **63 total tests** with colored pass/fail output
 
 ### Test Output Example
 
@@ -226,7 +381,19 @@ Run the comprehensive test suite:
 TESTING: Cross-platform compatibility
 ==========================================
 [TEST] Cross-platform: Shell feature compatibility
+Test confirmation function (simulate 'n' response)
+Test prompt (y/N): 
+Test confirmation function (simulate 'y' response)
+Test prompt (y/N): 
 [PASS] All cross-platform utility functions work correctly (6/6)
+[TEST] _git_format_timestamp: Edge case testing
+Testing normal timestamp generation...
+Testing fallback when DATE_FORMAT would be empty...
+Fallback logic works: '2025-06-30 15:11:54'
+Testing actual function consistency...
+Function consistency works: '2025-06-30 15:11:54'
+Testing timestamp consistency...
+[PASS] _git_format_timestamp works correctly in all edge cases (4/4)
 [TEST] Cross-platform: Shell syntax compatibility
 [PASS] Script syntax is valid in bash
 
@@ -246,6 +413,7 @@ TESTING: git-undo function
 [PASS] Stash was created with correct message
 [PASS] Metadata was stored in stash with correct content
 [TEST] git-undo: Special characters in commit
+stash@{0}: On main: undo - 2025-06-30 15:11:58 - [sc-123] fix: handle special chars (test) & more [brackets]
 [PASS] Handled special characters in commit message
 [TEST] git-undo: Multiple undos in sequence
 [PASS] Multiple undos work correctly
@@ -268,7 +436,7 @@ TESTING: git-stash function
 [PASS] git-stash created stash with correct message
 [TEST] git-stash: Stash with untracked files
 [PASS] git-stash handled both modified and untracked files
-[PASS] git-stash included untracked files in stash
+[PASS] git-stash included untracked and ignored files in stash
 [TEST] git-stash: Stash with staged files
 [PASS] git-stash handled staged files correctly
 [TEST] git-stash: Complex scenario with all file types
@@ -315,11 +483,82 @@ TESTING: git-redo function
 [PASS] git-redo successfully restored changes
 [PASS] git-redo left changes in working directory
 
+==========================================
+TESTING: git-squash function
+==========================================
+[TEST] git-squash: Not in git repository
+[PASS] git-squash correctly detected not in git repository
+[TEST] git-squash: Repository with no commits
+[PASS] git-squash correctly detected repository with no commits
+[TEST] git-squash: Dirty working directory
+[PASS] git-squash correctly detected dirty working directory
+[TEST] git-squash: On main branch
+[PASS] git-squash correctly prevented squashing on main branch
+[TEST] git-squash: Only one commit on branch
+[PASS] git-squash correctly detected only one commit
+[TEST] git-squash: Cancel squash operation
+[PASS] git-squash cancel operation works correctly
+[TEST] git-squash: Successful squash operation
+[PASS] git-squash function defined and preview works (interactive test skipped)
+[TEST] git-squash: No base branch found
+[PASS] git-squash correctly detected no base branch
+
+==========================================
+TESTING: git-status function
+==========================================
+[TEST] git-status: Not in git repository
+[PASS] git-status correctly detected not in git repository
+[TEST] git-status: Repository with no commits
+[PASS] git-status correctly detected repository with no commits
+[TEST] git-status: On main branch (not allowed)
+[PASS] git-status correctly prevented use on main branch
+[TEST] git-status: Nonexistent branch
+[PASS] git-status correctly detected nonexistent branch
+[TEST] git-status: Basic functionality
+[PASS] git-status correctly identified branch fork point
+[TEST] git-status: With specific branch parameter
+[PASS] git-status correctly identified specific branch fork point
+[TEST] git-status: Verbose mode (-v)
+[PASS] git-status -v correctly showed commits since fork
+[TEST] git-status: Full verbose mode (-vv)
+[PASS] git-status -vv correctly showed full commit details
+[TEST] git-status: Invalid option
+[PASS] git-status correctly handled invalid option
+[TEST] git-status: Develop branch preference
+[PASS] git-status correctly preferred develop over main
+
 ===============================================
-Test Results: 42 passed, 0 failed
+Test Results: 63 passed, 0 failed
 ===============================================
 All tests passed!
 ```
+
+### Test Coverage Breakdown
+
+The test suite provides comprehensive coverage across **63 tests** organized into **8 categories**:
+
+| **Category** | **Tests** | **Coverage** |
+|---|---|---|
+| **Cross-platform compatibility** | 3 | Shell feature validation, timestamp edge cases, syntax compatibility |
+| **git-undo function** | 9 | Error conditions, user interactions, metadata preservation |
+| **git-stash function** | 11 | File type handling, clean state verification, branch naming |
+| **git-clean-branches function** | 11 | Branch detection, protection logic, deletion safety |
+| **git-redo function** | 9 | Stash restoration, user selection, working directory checks |
+| **git-squash function** | 8 | Commit consolidation, editor integration, branch protection |
+| **git-status function** | 12 | Fork detection, verbose modes, main branch pending commits, branch validation |
+
+**Test Types:**
+- **Error condition tests** (20 tests): Repository validation, commit existence, permission checks
+- **Safety mechanism tests** (15 tests): Working directory protection, branch safeguards, user confirmation
+- **Core functionality tests** (18 tests): Primary operations, data integrity, expected behaviors, timestamp edge cases, main branch pending commits
+- **User interaction tests** (10 tests): Cancellation handling, input validation, confirmation prompts
+
+**Key Test Scenarios:**
+- **Repository state validation**: Tests all functions in non-git directories and empty repositories
+- **User cancellation**: Verifies all functions handle user cancellation gracefully
+- **Special cases**: Complex commit messages, multiple file types, edge conditions
+- **Timestamp edge cases**: Empty DATE_FORMAT handling, fallback behavior validation
+- **Cross-platform compatibility**: POSIX compliance and portable shell features
 
 ## Requirements
 
@@ -328,6 +567,22 @@ All tests passed!
 - **OS**: macOS, Linux, Unix, or WSL
 
 ## Advanced Features
+
+### Debug Mode
+All git-toolkit functions support a `--debug` flag for troubleshooting:
+```bash
+git-undo --debug
+git-redo --debug
+git-stash --debug
+git-clean-branches --debug
+git-squash --debug
+git-status --debug
+```
+
+Debug mode provides detailed diagnostic information including:
+- Branch detection and pattern matching
+- Variable values and code path selection
+- Detailed execution flow for troubleshooting
 
 ### git-undo
 - **Metadata preservation**: Full commit details stored in stash
@@ -343,7 +598,7 @@ All tests passed!
 - **Conflict handling**: Graceful handling of merge conflicts
 
 ### git-stash  
-- **Complete coverage**: Modified, staged, and untracked files
+- **Complete coverage**: Modified, staged, untracked, and ignored files
 - **Preview functionality**: See exactly what will be stashed
 - **Clean state guarantee**: Working directory guaranteed clean after stashing
 
@@ -352,6 +607,24 @@ All tests passed!
 - **Branch protection**: Safeguards current, main, master, and develop branches
 - **Detailed reporting**: Shows branch type and last commit info
 - **Selective deletion**: Different handling for merged vs. unmerged branches
+
+### git-squash
+- **Automatic base detection**: Finds main/master/develop branch automatically
+- **Interactive commit editing**: Opens editor for customizing squashed commit message
+- **Authorship preservation**: Maintains original author, uses current date/time
+- **Smart commit preview**: Shows detailed list of commits being squashed
+- **Safe operation**: Protects against squashing main branches, provides rollback on failure
+- **Cross-platform editor support**: Works with any configured git editor
+
+### git-status
+- **Dual functionality**: Works on both feature branches and main/master/develop branches
+- **Feature branches**: Smart base detection, automatically finds fork point from main/master/develop
+- **Main branches**: Shows pending commits since last push, or total commits if no remote
+- **Develop preference**: Chooses develop over main when distances are equal for feature branches
+- **Verbose modes**: Optional one-line (-v) or full commit (-vv) history for both branch types
+- **Clean output**: Suppresses debug output for professional results
+- **Flexible usage**: Works with current branch or specified branch name
+- **Debug mode**: Detailed diagnostic information available with `--debug` flag
 
 ## Limitations
 
@@ -371,6 +644,18 @@ All tests passed!
 - Requires commits to exist for branch comparison
 - Cannot delete current branch (safety feature)
 
+### git-squash
+- Only works on feature branches (protects main/master/develop)
+- Requires at least 2 commits on branch to squash
+- Needs base branch (main/master/develop) to exist for comparison
+- Editor cancellation or empty message cancels the operation
+
+### git-status
+- **Feature branches**: Requires base branches (main/master/develop) to exist for comparison
+- **Feature branches**: May not detect correct base if branch history is complex or rebased  
+- **Main branches**: Pending commit detection requires remote tracking branch for accurate count
+- Verbose modes (-v/-vv) require commits to exist since fork point or in branch history
+
 ## Contributing
 
 Contributions are welcome! Please:
@@ -381,7 +666,11 @@ Contributions are welcome! Please:
 
 ## Project History
 
-This project evolved from a simple git-undo bash function into a comprehensive Git safety toolkit. The current version prioritizes simplicity, safety, and cross-platform compatibility.
+I prefer using a standalone Git GUI tool—my favorite is https://git-fork.com/—for most of my Git workflows. A while ago, I created a simple `git-undo` bash function to solve one of my recurring pain points. Thanks to Claude Code, I was able to expand that into a full set of “missing” Git commands I’d always wanted. With the productivity boost from working with Claude Code, these utilities have become even more valuable to me. I hope you find them useful too!
+
+If you do, feel free to reach out on X at @tmgbabul.
+
+Wishing you safety, security, and good health! ☺️
 
 ## License
 
