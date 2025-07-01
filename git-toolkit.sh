@@ -272,7 +272,8 @@ git_undo() {
     
     # Safe to remove temp file now that we've verified it's in the stash
     rm -f "$temp_metadata"
-    echo "✓ Commit undone and changes stashed"
+    echo ""
+    echo "✓ Commit undone and changes stashed to $STASH_NAME"
 }
 
 git_stash() {
@@ -301,11 +302,10 @@ git_stash() {
     
     _git_validate_all || return 1
 
-    # Check if there's anything to stash (including ignored files)
+    # Check if there's anything to stash (including untracked files)
     if git diff-index --quiet HEAD 2>/dev/null && \
        git diff-index --quiet --cached HEAD 2>/dev/null && \
-       test -z "$(git ls-files --others --exclude-standard 2>/dev/null)" && \
-       test -z "$(git ls-files --others --ignored --exclude-standard 2>/dev/null)"; then
+       test -z "$(git ls-files --others --exclude-standard 2>/dev/null)"; then
         echo "✓ No changes to stash (working directory is clean)"
         return 0
     fi
@@ -327,7 +327,7 @@ git_stash() {
         echo "=================="
     fi
 
-    echo "Stashing all changes (including untracked and ignored files)..."
+    echo "Stashing all changes (including untracked files)..."
     
     # Show what will be stashed
     echo
@@ -355,8 +355,8 @@ git_stash() {
         return 0
     fi
 
-    # Stash everything including untracked & ignored files
-    if ! git stash push --all -m "$STASH_MSG" 2>/dev/null; then
+    # Stash everything including untracked files (but not ignored files)
+    if ! git stash push --include-untracked -m "$STASH_MSG" 2>/dev/null; then
         echo "✗ Error: Failed to create stash"
         return 1
     fi
@@ -415,10 +415,6 @@ git_clean_branches() {
         echo "Protected pattern: $(_git_get_protected_pattern)"
         echo "=================="
     fi
-    
-    # Collect branches to delete
-    local MERGED_BRANCHES=""
-    local GONE_BRANCHES=""
     
     # Get all branches with merged/gone status in a single pass
     # Process branch list once to avoid repeated greps
@@ -745,12 +741,11 @@ git_squash() {
     fi
     
     # Get the first (oldest) commit after merge base
-    local FIRST_COMMIT_HASH FIRST_COMMIT_MSG FIRST_COMMIT_AUTHOR FIRST_COMMIT_DATE
+    local FIRST_COMMIT_HASH FIRST_COMMIT_MSG FIRST_COMMIT_AUTHOR
     FIRST_COMMIT_HASH=$(git rev-list "$MERGE_BASE..HEAD" | tail -1)
     FIRST_COMMIT_MSG=$(git log -1 --pretty=format:"%B" "$FIRST_COMMIT_HASH" 2>/dev/null)
     FIRST_COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an <%ae>" "$FIRST_COMMIT_HASH" 2>/dev/null)
-    FIRST_COMMIT_DATE=$(git log -1 --pretty=format:"%ai" "$FIRST_COMMIT_HASH" 2>/dev/null)
-    
+
     # Show what will be squashed
     echo "About to squash commits:"
     echo "  Branch: $CURRENT_BRANCH"

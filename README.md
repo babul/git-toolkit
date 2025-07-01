@@ -20,7 +20,7 @@ This toolkit provides six essential Git utilities:
 |----------|--------------------------------------------------------------------------------------------|--------------|
 | **`git-undo`** | Safely undo the last commit while preserving changes in a stash                            | Interactive preview, metadata preservation, safe rollback |
 | **`git-redo`** | Restore previously undone commits from undo stashes                                        | Smart stash detection, interactive selection, conflict-safe |
-| **`git-stash`** | Stash all changes (including untracked and ignored files) to get a clean working directory | Complete file coverage, preview mode, guaranteed clean state |
+| **`git-stash`** | Stash all changes (including untracked files) to get a clean working directory | Complete file coverage, preview mode, guaranteed clean state |
 | **`git-clean-branches`** | Clean up merged and orphaned branches with detailed previews                               | Branch protection, detailed reporting, selective cleanup |
 | **`git-squash`** | Squash all commits in current branch into the oldest commit                                | Interactive commit message editing, preserves authorship, uses current date |
 | **`git-status`** | Show count of commits and untracked files, what branch any feature branch forked from      | Smart base detection, verbose commit history, develop preference |
@@ -61,16 +61,16 @@ git-undo
 - Requires clean working directory
 
 ### git-stash  
-Stash all changes including untracked and ignored files to get a clean branch.
+Stash all changes including untracked files to get a clean branch.
 
 ```bash
 git-stash
 ```
 
 **Features:**
-- Handles modified, staged, untracked, and ignored files
+- Handles modified, staged, and untracked files
 - Shows preview of what will be stashed
-- Uses `--all` for complete cleanup including ignored files
+- Uses `--include-untracked` for complete cleanup (excludes ignored files)
 - Branch-named and timestamped stash messages for easy identification
 
 ### git-redo
@@ -184,7 +184,7 @@ You can now:
 ### git-stash
 ```bash
 $ git-stash
-Stashing all changes (including untracked and ignored files)...
+Stashing all changes (including untracked files)...
 
 Files to be stashed:
   Modified files:
@@ -603,7 +603,7 @@ Debug mode provides detailed diagnostic information including:
 - **Conflict handling**: Graceful handling of merge conflicts
 
 ### git-stash  
-- **Complete coverage**: Modified, staged, untracked, and ignored files
+- **Complete coverage**: Modified, staged, and untracked files
 - **Preview functionality**: See exactly what will be stashed
 - **Clean state guarantee**: Working directory guaranteed clean after stashing
 
