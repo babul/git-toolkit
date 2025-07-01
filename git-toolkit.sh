@@ -430,23 +430,23 @@ git_clean_branches() {
             fi
             
             # Check if merged
-            local status=""
+            local branch_status=""
             if git merge-base --is-ancestor "$branch" HEAD 2>/dev/null; then
-                status="merged"
+                branch_status="merged"
             fi
             
             # Check if gone from remote
             if test "$track" = "[gone]"; then
-                if test -n "$status"; then
-                    status="$status, gone from remote"
+                if test -n "$branch_status"; then
+                    branch_status="$branch_status, gone from remote"
                 else
-                    status="gone from remote"
+                    branch_status="gone from remote"
                 fi
             fi
             
             # Only output branches that are either merged or gone
-            if test -n "$status"; then
-                echo "$branch|$status"
+            if test -n "$branch_status"; then
+                echo "$branch|$branch_status"
             fi
         done
     )
@@ -457,11 +457,11 @@ git_clean_branches() {
     fi
     
     echo "About to delete branches:"
-    echo "$ALL_BRANCHES_INFO" | while IFS='|' read -r branch status; do
+    echo "$ALL_BRANCHES_INFO" | while IFS='|' read -r branch branch_status; do
         if test -n "$branch"; then
             local BRANCH_INFO
             BRANCH_INFO=$(git log --oneline -1 "$branch" 2>/dev/null || echo "No commits")
-            echo "  Branch: $branch ($status)"
+            echo "  Branch: $branch ($branch_status)"
             echo "  Last commit: $BRANCH_INFO"
         fi
     done
@@ -472,13 +472,13 @@ git_clean_branches() {
         return 0
     fi
     
-    echo "$ALL_BRANCHES_INFO" | while IFS='|' read -r branch status; do
+    echo "$ALL_BRANCHES_INFO" | while IFS='|' read -r branch branch_status; do
         if test -n "$branch"; then
             if git branch -d "$branch" > /dev/null 2>&1; then
                 echo "✓ Deleted branch: $branch"
             else
                 # Try force delete for unmerged branches that are gone from remote
-                if echo "$status" | grep -q "gone from remote"; then
+                if echo "$branch_status" | grep -q "gone from remote"; then
                     if git branch -D "$branch" > /dev/null 2>&1; then
                         echo "✓ Force deleted gone branch: $branch"
                     else

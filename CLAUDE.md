@@ -80,6 +80,14 @@ Functions use POSIX-compliant syntax with specific considerations:
 - Uses `read -r` for safe input handling
 - Temporary files for complex operations to avoid subshell variable issues
 
+**POSIX Shell Compatibility Issues**:
+- **Function Naming**: POSIX sh doesn't allow hyphens in function names. All functions use underscores (e.g., `git_undo` not `git-undo`)
+- **Source Command**: POSIX sh uses `.` instead of `source`. Always use `. script.sh` for compatibility
+- **Echo Command**: `echo -e` is not portable. Use `printf` for escape sequences (e.g., `printf "1\ny\n"` instead of `echo -e "1\ny"`)
+- **Reserved Variables**: Avoid using `status` as a variable name - it's read-only in some shells. Use descriptive names like `branch_status`
+
+**Backward Compatibility**: For users expecting hyphenated function names, conditional aliases are created only in interactive bash/zsh shells to avoid parse errors in POSIX sh
+
 ## Debug Mode and Variable Robustness
 
 **Debug Mode**: `git-status --debug` provides detailed diagnostic information including branch detection, pattern matching, and code path selection. Essential for troubleshooting branch classification issues.
@@ -91,3 +99,5 @@ Functions use POSIX-compliant syntax with specific considerations:
 - Never rely solely on `-z` test for pattern validation
 
 **Pattern Matching Safety**: Empty regex patterns match everything, causing feature branches to be misclassified as protected branches. Always validate pattern content before use.
+
+**Critical Pattern Usage**: Always use `$(_git_get_protected_pattern)` helper function instead of `$PROTECTED_BRANCHES_PATTERN` directly. The helper provides fallback logic when the pattern variable is corrupted or empty, preventing misclassification of all branches as protected.
