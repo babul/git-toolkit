@@ -53,7 +53,7 @@ setup_test_repo() {
     git config user.email "test@example.com"
     
     # Source the script after setup to avoid readonly errors
-    source "$SCRIPT_DIR/git-toolkit.sh"
+    . "$SCRIPT_DIR/git-toolkit.sh"
     
     echo "$test_dir"
 }
@@ -94,7 +94,7 @@ TEST_DIR=$(setup_test_repo_with_commit "compat")
 cd "$TEST_DIR" || exit 1
 
 # Re-source to ensure functions are available
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 # Test validation functions
 COMPAT_PASS=0
@@ -162,7 +162,7 @@ TEST_DIR=$(setup_test_repo_with_commit "timestamp")
 cd "$TEST_DIR" || exit 1
 
 # Re-source to ensure functions are available
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 TIMESTAMP_PASS=0
 TIMESTAMP_FAIL=0
@@ -250,7 +250,7 @@ echo -e "${YELLOW}[TEST]${NC} git_undo: Not in git repository"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-nogit-XXXXXX)"
 cd "$TEST_DIR" || exit 1
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 if ! output=$(git_undo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
     echo -e "${GREEN}[PASS]${NC} Correctly detected not in git repository"
@@ -266,7 +266,7 @@ rm -rf "$TEST_DIR"
 echo -e "${YELLOW}[TEST]${NC} git_undo: Initial commit protection"
 TEST_DIR=$(setup_test_repo_with_commit "initial")
 cd "$TEST_DIR" || exit 1
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 if ! output=$(git_undo $DEBUG_MODE 2>&1) && (echo "$output" | grep -q "Error: Cannot undo the initial commit" || echo "$output" | grep -q "Error: Repository has no commits"); then
     echo -e "${GREEN}[PASS]${NC} Correctly prevented undoing initial commit"
@@ -285,7 +285,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "test" > file1.txt
 git add file1.txt
@@ -314,7 +314,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "test" > file1.txt
 git add file1.txt
@@ -346,7 +346,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "test" > file1.txt
 git add file1.txt
@@ -410,7 +410,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "test" > file1.txt
 git add file1.txt
@@ -442,7 +442,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "first" > file1.txt
 git add file1.txt
@@ -485,7 +485,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -554,7 +554,7 @@ echo -e "${YELLOW}[TEST]${NC} git_stash: Not in git repository"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-stash-nogit-XXXXXX)"
 cd "$TEST_DIR" || exit 1
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 if ! output=$(echo "n" | git_stash 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
     echo -e "${GREEN}[PASS]${NC} git_stash correctly detected not in git repository"
@@ -574,7 +574,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 if ! output=$(git_stash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
     echo -e "${GREEN}[PASS]${NC} git_stash correctly detected repository with no commits"
@@ -593,7 +593,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "test" > file1.txt
 git add file1.txt
@@ -616,7 +616,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "test" > file1.txt
 git add file1.txt
@@ -648,7 +648,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -692,7 +692,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -733,7 +733,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -766,7 +766,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -817,7 +817,7 @@ echo -e "${YELLOW}[TEST]${NC} git_clean_branches: Not in git repository"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-clean-nogit-XXXXXX)"
 cd "$TEST_DIR" || exit 1
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 if ! output=$(git_clean_branches $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
     echo -e "${GREEN}[PASS]${NC} git_clean_branches correctly detected not in git repository"
@@ -837,7 +837,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 if ! output=$(git_clean_branches $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
     echo -e "${GREEN}[PASS]${NC} git_clean_branches correctly detected repository with no commits"
@@ -856,7 +856,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -879,7 +879,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -916,7 +916,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -969,7 +969,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1016,7 +1016,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1083,7 +1083,7 @@ echo -e "${YELLOW}[TEST]${NC} git_redo: Not in git repository"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-redo-nogit-XXXXXX)"
 cd "$TEST_DIR" || exit 1
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 if ! output=$(git_redo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
     echo -e "${GREEN}[PASS]${NC} git_redo correctly detected not in git repository"
@@ -1103,7 +1103,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 if ! output=$(git_redo $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
     echo -e "${GREEN}[PASS]${NC} git_redo correctly detected repository with no commits"
@@ -1122,7 +1122,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1145,7 +1145,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1178,7 +1178,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1218,7 +1218,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1275,7 +1275,7 @@ echo -e "${YELLOW}[TEST]${NC} git_squash: Not in git repository"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-squash-nogit-XXXXXX)"
 cd "$TEST_DIR" || exit 1
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 if ! output=$(git_squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
     echo -e "${GREEN}[PASS]${NC} git_squash correctly detected not in git repository"
@@ -1295,7 +1295,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 if ! output=$(git_squash $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
     echo -e "${GREEN}[PASS]${NC} git_squash correctly detected repository with no commits"
@@ -1314,7 +1314,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1344,7 +1344,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1367,7 +1367,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1395,7 +1395,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1433,7 +1433,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1465,7 +1465,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 # Create commits on a branch called "feature" without main/master/develop
 echo "initial" > file1.txt
@@ -1502,7 +1502,7 @@ echo -e "${YELLOW}[TEST]${NC} git_status: Not in git repository"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-show-nogit-XXXXXX)"
 cd "$TEST_DIR" || exit 1
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 if ! output=$(git_status $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
     echo -e "${GREEN}[PASS]${NC} git_status correctly detected not in git repository"
@@ -1522,7 +1522,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 if ! output=$(git_status $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
     echo -e "${GREEN}[PASS]${NC} git_status correctly detected repository with no commits"
@@ -1541,7 +1541,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1564,7 +1564,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1597,7 +1597,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1620,7 +1620,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 # Create main branch with initial commit
 echo "initial" > file1.txt
@@ -1658,7 +1658,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 # Create main branch
 echo "initial" > file1.txt
@@ -1695,7 +1695,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 # Create main branch
 echo "initial" > file1.txt
@@ -1741,7 +1741,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 # Create main branch
 echo "initial" > file1.txt
@@ -1783,7 +1783,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 echo "initial" > file1.txt
 git add file1.txt
@@ -1807,7 +1807,7 @@ cd "$TEST_DIR" || exit 1
 git init > /dev/null 2>&1
 git config user.name "Test User"
 git config user.email "test@example.com"
-source "$SCRIPT_DIR/git-toolkit.sh"
+. "$SCRIPT_DIR/git-toolkit.sh"
 
 # Create main branch
 echo "initial" > file1.txt
