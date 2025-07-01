@@ -1192,7 +1192,7 @@ git commit -m "Second commit" > /dev/null 2>&1
 echo "y" | git_undo > /dev/null 2>&1
 
 # Test cancellation at selection stage
-if echo -e "q" | git_redo 2>&1 | grep -q "Redo cancelled"; then
+if printf "q\n" | git_redo 2>&1 | grep -q "Redo cancelled"; then
     echo -e "${GREEN}[PASS]${NC} git_redo cancel at selection works correctly"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
@@ -1201,7 +1201,7 @@ else
 fi
 
 # Test cancellation at confirmation stage
-if echo -e "1\nn" | git_redo 2>&1 | grep -q "Redo cancelled"; then
+if printf "1\nn\n" | git_redo 2>&1 | grep -q "Redo cancelled"; then
     echo -e "${GREEN}[PASS]${NC} git_redo cancel at confirmation works correctly"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
@@ -1241,7 +1241,7 @@ else
 fi
 
 # Now redo the commit
-if echo -e "1\ny" | git_redo > /dev/null 2>&1; then
+if printf "1\ny\n" | git_redo > /dev/null 2>&1; then
     # Verify file is back after redo
     if [ -f file2.txt ] && [ "$(cat file2.txt)" = "second content" ]; then
         echo -e "${GREEN}[PASS]${NC} git_redo successfully restored changes"

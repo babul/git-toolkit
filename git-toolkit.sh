@@ -425,7 +425,7 @@ git_clean_branches() {
     ALL_BRANCHES_INFO=$(git for-each-ref refs/heads --format='%(refname:short) %(upstream:track)' 2>/dev/null | 
         while read -r branch track; do
             # Skip protected branches
-            if echo "$branch" | grep -qE "$PROTECTED_BRANCHES_PATTERN" || test "$branch" = "$CURRENT_BRANCH"; then
+            if echo "$branch" | grep -qE "$(_git_get_protected_pattern)" || test "$branch" = "$CURRENT_BRANCH"; then
                 continue
             fi
             
@@ -695,7 +695,7 @@ git_squash() {
     fi
     
     # Check if we're on main/master/develop (can't squash these)
-    if echo "$CURRENT_BRANCH" | grep -qE "$PROTECTED_BRANCHES_PATTERN"; then
+    if echo "$CURRENT_BRANCH" | grep -qE "$(_git_get_protected_pattern)"; then
         echo "✗ Error: Cannot squash commits on main/master/develop branch"
         return 1
     fi
