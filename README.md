@@ -527,7 +527,7 @@ Run tests in debug mode for troubleshooting:
 - Error conditions and edge cases
 - User interaction scenarios (confirmation, cancellation)
 - Cross-platform compatibility validation
-- **69 total tests** with colored pass/fail output
+- **74 total tests** with colored pass/fail output
 
 ### Test Output Example
 

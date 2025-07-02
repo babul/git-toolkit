@@ -49,7 +49,7 @@ sh ./test-git-toolkit.sh --debug
 # Test specific function (modify test script to run individual test blocks)
 # Tests are organized by function in the script with clear section headers
 
-**Always** run test and debugs within a folder under ./tests/. This folder is in .gitignore so it will not be interferred with.
+**Always** run test and debugs within a folder under tests/ from repo root. This folder is in .gitignore so it will not be interferred with.
 ```
 
 ### Installation & Usage
@@ -63,7 +63,7 @@ echo "source $(pwd)/git-toolkit.sh" >> ~/.bashrc
 
 ## Key Implementation Details
 
-**Stash Management**: `git-undo` creates specially formatted stashes with metadata files that `git-redo` can identify and restore. Uses `"undo - TIMESTAMP - COMMIT_MSG"` naming pattern.
+**Stash Management**: `git-undo` creates specially formatted stashes with metadata files that `git-redo` can identify and restore. Uses `"undo BRANCH COMMIT_MSG"` naming pattern.
 
 **Branch Protection**: All functions protect main/master/develop branches using `PROTECTED_BRANCHES_PATTERN` regex.
 

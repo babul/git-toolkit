@@ -90,6 +90,183 @@ _git_format_timestamp() {
     date "+$format" 2>/dev/null
 }
 
+# Display file status information with color coding
+# $1: file status data (output of git diff --name-status)
+# $2: color context ("staged" for green, "unstaged" for red/mixed)
+_git_display_file_status() {
+    local file_status_data="$1"
+    local color_context="$2"
+    
+    echo "$file_status_data" | while IFS=$'\t' read -r file_status file rest; do
+        case "$file_status" in
+            M*) 
+                printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file" ;;
+            A*) 
+                printf "    \033[32mnew file:   \033[32m%s\033[0m\n" "$file" ;;
+            D*) 
+                if [ "$color_context" = "staged" ]; then
+                    printf "    \033[32mdeleted:    \033[32m%s\033[0m\n" "$file"
+                else
+                    printf "    \033[31mdeleted:    \033[31m%s\033[0m\n" "$file"
+                fi
+                ;;
+            R*) 
+                # For renames, 'file' contains old name and 'rest' contains new name
+                if [ -n "$rest" ]; then
+                    printf "    \033[32mrenamed:    \033[32m%s -> %s\033[0m\n" "$file" "$rest"
+                else
+                    printf "    \033[32mrenamed:    \033[32m%s\033[0m\n" "$file"
+                fi
+                ;;
+            *) 
+                if [ "$color_context" = "staged" ]; then
+                    printf "    \033[32m%s:   \033[32m%s\033[0m\n" "$file_status" "$file"
+                else
+                    printf "    \033[31m%s:   \033[31m%s\033[0m\n" "$file_status" "$file"
+                fi
+                ;;
+        esac
+    done
+}
+
+# Shared argument parsing utility
+# Usage: _git_parse_args function_name "$@"
+# Sets variables: DEBUG_MODE, VERBOSE_MODE, TARGET_BRANCH, CUSTOM_MESSAGE, AGE_DAYS
+_git_parse_args() {
+    local function_name="$1"
+    shift
+    
+    # Initialize common variables
+    DEBUG_MODE=""
+    
+    # Function-specific variable initialization
+    case "$function_name" in
+        git_status)
+            VERBOSE_MODE=""
+            TARGET_BRANCH=""
+            ;;
+        git_stash)
+            CUSTOM_MESSAGE=""
+            ;;
+        git_clean_stashes)
+            AGE_DAYS="60"  # default value
+            ;;
+    esac
+    
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --debug)
+                DEBUG_MODE="true"
+                shift
+                ;;
+            -v)
+                if [ "$function_name" = "git_status" ]; then
+                    VERBOSE_MODE="oneline"
+                    shift
+                else
+                    echo "✗ Error: Unknown option '$1'"
+                    _git_show_usage "$function_name"
+                    return 1
+                fi
+                ;;
+            -vv)
+                if [ "$function_name" = "git_status" ]; then
+                    VERBOSE_MODE="full"
+                    shift
+                else
+                    echo "✗ Error: Unknown option '$1'"
+                    _git_show_usage "$function_name"
+                    return 1
+                fi
+                ;;
+            --age=*)
+                if [ "$function_name" = "git_clean_stashes" ]; then
+                    AGE_DAYS=$(echo "$1" | sed 's/--age=//')
+                    if ! echo "$AGE_DAYS" | grep -q "^[0-9]\+$"; then
+                        echo "✗ Error: Invalid age value '$AGE_DAYS'. Must be a positive integer."
+                        return 1
+                    fi
+                    shift
+                else
+                    echo "✗ Error: Unknown option '$1'"
+                    _git_show_usage "$function_name"
+                    return 1
+                fi
+                ;;
+            -*)
+                echo "✗ Error: Unknown option '$1'"
+                _git_show_usage "$function_name"
+                return 1
+                ;;
+            *)
+                # Handle positional arguments based on function
+                case "$function_name" in
+                    git_stash)
+                        # Collect all remaining arguments as the custom message
+                        if [ -z "$CUSTOM_MESSAGE" ]; then
+                            CUSTOM_MESSAGE="$1"
+                        else
+                            CUSTOM_MESSAGE="$CUSTOM_MESSAGE $1"
+                        fi
+                        shift
+                        ;;
+                    git_status)
+                        # Accept single branch name
+                        TARGET_BRANCH="$1"
+                        shift
+                        ;;
+                    *)
+                        # Functions that don't accept positional arguments
+                        echo "✗ Error: Unexpected argument '$1'"
+                        _git_show_usage "$function_name"
+                        return 1
+                        ;;
+                esac
+                ;;
+        esac
+    done
+}
+
+# Generate usage message for each function
+_git_show_usage() {
+    local function_name="$1"
+    case "$function_name" in
+        git_undo)
+            echo "Usage: git_undo [--debug]"
+            echo "  --debug Show debug information"
+            ;;
+        git_stash)
+            echo "Usage: git_stash [--debug] [message]"
+            echo "  --debug Show debug information"
+            echo "  message Custom stash message"
+            ;;
+        git_clean_branches)
+            echo "Usage: git_clean_branches [--debug]"
+            echo "  --debug Show debug information"
+            ;;
+        git_redo)
+            echo "Usage: git_redo [--debug]"
+            echo "  --debug Show debug information"
+            ;;
+        git_squash)
+            echo "Usage: git_squash [--debug]"
+            echo "  --debug Show debug information"
+            ;;
+        git_status)
+            echo "Usage: git_status [-v|-vv] [--debug] [branch-name]"
+            echo "  -v       Show oneline commits since fork"
+            echo "  -vv      Show full commits since fork"
+            echo "  --debug  Show debug information"
+            echo "  branch-name  Target branch to check against"
+            ;;
+        git_clean_stashes)
+            echo "Usage: git_clean_stashes [--debug] [--age=days]"
+            echo "  --debug    Show debug information"
+            echo "  --age=N    Clean stashes older than N days (default: 60)"
+            ;;
+    esac
+}
+
 _git_validate_all() {
     _git_validate_repo || return 1
     _git_validate_commits || return 1
@@ -116,22 +293,17 @@ _git_get_uncommitted_status() {
     local modified_files_with_status
     modified_files_with_status=$(git diff --name-status 2>/dev/null)
     if [ -n "$modified_files_with_status" ]; then
-        # Count total files first
-        local working_tree_count
-        working_tree_count=$(echo "$modified_files_with_status" | wc -l)
+        # Count all file types in single pass
+        local counts
+        counts=$(echo "$modified_files_with_status" | awk '
+            /^M/ { modified++ }
+            /^D/ { deleted++ }
+            END { print (modified+0), (deleted+0), NR }
+        ')
+        modified_count=$(echo "$counts" | cut -d' ' -f1)
+        deleted_count=$(echo "$counts" | cut -d' ' -f2)
+        local working_tree_count=$(echo "$counts" | cut -d' ' -f3)
         total_count=$((total_count + working_tree_count))
-        
-        # Count modified vs deleted separately for display
-        if echo "$modified_files_with_status" | grep -q '^M'; then
-            modified_count=$(echo "$modified_files_with_status" | grep -c '^M')
-        else
-            modified_count=0
-        fi
-        if echo "$modified_files_with_status" | grep -q '^D'; then
-            deleted_count=$(echo "$modified_files_with_status" | grep -c '^D')
-        else
-            deleted_count=0
-        fi
     fi
     
     # Get untracked files
@@ -154,42 +326,13 @@ _git_get_uncommitted_status() {
         if [ "$staged_count" -gt 0 ]; then
             [ "$sections_shown" -gt 0 ] && echo
             printf "  \033[32mChanges to be committed:\033[0m\n"
-            echo "$staged_files_with_status" | while IFS=$'\t' read -r file_status file rest; do
-                case "$file_status" in
-                    M*) printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file" ;;
-                    A*) printf "    \033[32mnew file:   \033[32m%s\033[0m\n" "$file" ;;
-                    D*) printf "    \033[32mdeleted:    \033[32m%s\033[0m\n" "$file" ;;
-                    R*) 
-                        # For renames, 'file' contains old name and 'rest' contains new name
-                        if [ -n "$rest" ]; then
-                            printf "    \033[32mrenamed:    \033[32m%s -> %s\033[0m\n" "$file" "$rest"
-                        else
-                            printf "    \033[32mrenamed:    \033[32m%s\033[0m\n" "$file"
-                        fi
-                        ;;
-                    *) printf "    \033[32m%s:   \033[32m%s\033[0m\n" "$file_status" "$file" ;;
-                esac
-            done
+            _git_display_file_status "$staged_files_with_status" "staged"
             sections_shown=$((sections_shown + 1))
         fi
         if [ "$modified_count" -gt 0 ] || [ "$deleted_count" -gt 0 ]; then
             [ "$sections_shown" -gt 0 ] && echo
             printf "  \033[31mChanges not staged for commit:\033[0m\n"
-            echo "$modified_files_with_status" | while IFS=$'\t' read -r file_status file rest; do
-                case "$file_status" in
-                    M*) printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file" ;;
-                    D*) printf "    \033[31mdeleted:    \033[31m%s\033[0m\n" "$file" ;;
-                    R*) 
-                        # For renames, 'file' contains old name and 'rest' contains new name
-                        if [ -n "$rest" ]; then
-                            printf "    \033[32mrenamed:    \033[32m%s -> %s\033[0m\n" "$file" "$rest"
-                        else
-                            printf "    \033[32mrenamed:    \033[32m%s\033[0m\n" "$file"
-                        fi
-                        ;;
-                    *) printf "    \033[31m%s:   \033[31m%s\033[0m\n" "$file_status" "$file" ;;
-                esac
-            done
+            _git_display_file_status "$modified_files_with_status" "unstaged"
             sections_shown=$((sections_shown + 1))
         fi
         if [ "$untracked_count" -gt 0 ]; then
@@ -206,28 +349,8 @@ _git_get_uncommitted_status() {
 }
 
 git_undo() {
-    local DEBUG_MODE=""
-    
-    # Parse command line arguments
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --debug)
-                DEBUG_MODE="true"
-                shift
-                ;;
-            -*)
-                echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git_undo [--debug]"
-                echo "  --debug Show debug information"
-                return 1
-                ;;
-            *)
-                echo "✗ Error: Unexpected argument '$1'"
-                echo "Usage: git_undo [--debug]"
-                return 1
-                ;;
-        esac
-    done
+    # Parse command line arguments using shared utility
+    _git_parse_args "git_undo" "$@" || return 1
     
     _git_validate_all || return 1
 
@@ -325,34 +448,8 @@ git_undo() {
 }
 
 git_stash() {
-    local DEBUG_MODE=""
-    local CUSTOM_MESSAGE=""
-    
-    # Parse command line arguments
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --debug)
-                DEBUG_MODE="true"
-                shift
-                ;;
-            -*)
-                echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git_stash [--debug] [message]"
-                echo "  --debug Show debug information"
-                echo "  message Optional text to include in stash name"
-                return 1
-                ;;
-            *)
-                # Collect all remaining arguments as the custom message
-                if [ -z "$CUSTOM_MESSAGE" ]; then
-                    CUSTOM_MESSAGE="$1"
-                else
-                    CUSTOM_MESSAGE="$CUSTOM_MESSAGE $1"
-                fi
-                shift
-                ;;
-        esac
-    done
+    # Parse command line arguments using shared utility
+    _git_parse_args "git_stash" "$@" || return 1
     
     _git_validate_all || return 1
 
@@ -396,22 +493,7 @@ git_stash() {
     if [ -n "$staged_files_with_status" ]; then
         [ "$sections_shown" -gt 0 ] && echo
         printf "  \033[32mChanges to be committed:\033[0m\n"
-        echo "$staged_files_with_status" | while IFS=$'\t' read -r file_status file rest; do
-            case "$file_status" in
-                M*) printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file" ;;
-                A*) printf "    \033[32mnew file:   \033[32m%s\033[0m\n" "$file" ;;
-                D*) printf "    \033[32mdeleted:    \033[32m%s\033[0m\n" "$file" ;;
-                R*) 
-                    # For renames, 'file' contains old name and 'rest' contains new name
-                    if [ -n "$rest" ]; then
-                        printf "    \033[32mrenamed:    \033[32m%s -> %s\033[0m\n" "$file" "$rest"
-                    else
-                        printf "    \033[32mrenamed:    \033[32m%s\033[0m\n" "$file"
-                    fi
-                    ;;
-                *) printf "    \033[32m%s:   \033[32m%s\033[0m\n" "$file_status" "$file" ;;
-            esac
-        done
+        _git_display_file_status "$staged_files_with_status" "staged"
         sections_shown=$((sections_shown + 1))
     fi
     
@@ -421,21 +503,7 @@ git_stash() {
     if [ -n "$modified_files_with_status" ]; then
         [ "$sections_shown" -gt 0 ] && echo
         printf "  \033[31mChanges not staged for commit:\033[0m\n"
-        echo "$modified_files_with_status" | while IFS=$'\t' read -r file_status file rest; do
-            case "$file_status" in
-                M*) printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file" ;;
-                D*) printf "    \033[31mdeleted:    \033[31m%s\033[0m\n" "$file" ;;
-                R*) 
-                    # For renames, 'file' contains old name and 'rest' contains new name
-                    if [ -n "$rest" ]; then
-                        printf "    \033[32mrenamed:    \033[32m%s -> %s\033[0m\n" "$file" "$rest"
-                    else
-                        printf "    \033[32mrenamed:    \033[32m%s\033[0m\n" "$file"
-                    fi
-                    ;;
-                *) printf "    \033[31m%s:   \033[31m%s\033[0m\n" "$file_status" "$file" ;;
-            esac
-        done
+        _git_display_file_status "$modified_files_with_status" "unstaged"
         sections_shown=$((sections_shown + 1))
     fi
     
@@ -479,28 +547,8 @@ git_stash() {
 }
 
 git_clean_branches() {
-    local DEBUG_MODE=""
-    
-    # Parse command line arguments
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --debug)
-                DEBUG_MODE="true"
-                shift
-                ;;
-            -*)
-                echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git_clean_branches [--debug]"
-                echo "  --debug Show debug information"
-                return 1
-                ;;
-            *)
-                echo "✗ Error: Unexpected argument '$1'"
-                echo "Usage: git_clean_branches [--debug]"
-                return 1
-                ;;
-        esac
-    done
+    # Parse command line arguments using shared utility
+    _git_parse_args "git_clean_branches" "$@" || return 1
     
     _git_validate_all || return 1
 
@@ -595,28 +643,8 @@ git_clean_branches() {
 }
 
 git_redo() {
-    local DEBUG_MODE=""
-    
-    # Parse command line arguments
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --debug)
-                DEBUG_MODE="true"
-                shift
-                ;;
-            -*)
-                echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git_redo [--debug]"
-                echo "  --debug Show debug information"
-                return 1
-                ;;
-            *)
-                echo "✗ Error: Unexpected argument '$1'"
-                echo "Usage: git_redo [--debug]"
-                return 1
-                ;;
-        esac
-    done
+    # Parse command line arguments using shared utility
+    _git_parse_args "git_redo" "$@" || return 1
     
     _git_validate_all || return 1
 
@@ -757,28 +785,8 @@ git_redo() {
 }
 
 git_squash() {
-    local DEBUG_MODE=""
-    
-    # Parse command line arguments
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --debug)
-                DEBUG_MODE="true"
-                shift
-                ;;
-            -*)
-                echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git_squash [--debug]"
-                echo "  --debug Show debug information"
-                return 1
-                ;;
-            *)
-                echo "✗ Error: Unexpected argument '$1'"
-                echo "Usage: git_squash [--debug]"
-                return 1
-                ;;
-        esac
-    done
+    # Parse command line arguments using shared utility
+    _git_parse_args "git_squash" "$@" || return 1
     
     _git_validate_all || return 1
     _git_check_clean_working_dir || return 1
@@ -818,10 +826,20 @@ git_squash() {
         return 1
     fi
     
+    # Validate base branch exists before attempting merge-base
+    if ! git rev-parse --verify "$BASE_BRANCH" >/dev/null 2>&1; then
+        echo "✗ Error: Base branch '$BASE_BRANCH' does not exist"
+        echo "  Available branches: $(git branch -a --format='%(refname:short)' | tr '\n' ' ')"
+        return 1
+    fi
+    
     # Find merge base commit
     local MERGE_BASE
     if ! MERGE_BASE=$(git merge-base HEAD "$BASE_BRANCH" 2>/dev/null); then
         echo "✗ Error: Could not find merge base with $BASE_BRANCH"
+        echo "  This usually means the branches have no common history"
+        echo "  Current branch: $CURRENT_BRANCH"
+        echo "  Target base: $BASE_BRANCH"
         return 1
     fi
     
@@ -864,7 +882,11 @@ git_squash() {
     fi
 
     # Create a temporary file for the commit message
-    local temp_commit_msg="/tmp/git-squash-msg-$$"
+    local temp_commit_msg
+    temp_commit_msg=$(mktemp -t git-squash-msg.XXXXXX) || {
+        echo "✗ Error: Could not create temporary file"
+        return 1
+    }
     
     # Prepare initial commit message (first commit + summary of others)
     {
@@ -888,9 +910,25 @@ git_squash() {
     local EDITOR_CMD
     EDITOR_CMD="${EDITOR:-${VISUAL:-vi}}"
     
+    # Validate editor command to prevent command injection
+    case "$EDITOR_CMD" in
+        *\;*|*\&*|*\|*|*\$*|*\`*|*\(*|*\)*|*\{*|*\}*)
+            echo "✗ Error: Editor command contains unsafe characters"
+            rm -f "$temp_commit_msg"
+            return 1
+            ;;
+    esac
+    
     echo "Opening editor to edit commit message..."
     if ! "$EDITOR_CMD" "$temp_commit_msg"; then
-        echo "✗ Error: Editor exited with error"
+        local editor_exit_code=$?
+        echo "✗ Error: Editor exited with error (exit code: $editor_exit_code)"
+        echo "  Editor command: $EDITOR_CMD"
+        echo "  This could mean:"
+        echo "    - Editor was cancelled or interrupted"
+        echo "    - Editor command is invalid or not found"
+        echo "    - Editor encountered an internal error"
+        echo "  Restoring branch to original state..."
         # Try to restore the branch
         git reset --hard HEAD@{1} > /dev/null 2>&1
         rm -f "$temp_commit_msg"
@@ -931,38 +969,8 @@ git_squash() {
 }
 
 git_clean_stashes() {
-    local DEBUG_MODE=""
-    local AGE_DAYS=60
-    
-    # Parse command line arguments
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --debug)
-                DEBUG_MODE="true"
-                shift
-                ;;
-            --age=*)
-                AGE_DAYS=$(echo "$1" | sed 's/--age=//')
-                if ! echo "$AGE_DAYS" | grep -q "^[0-9]\+$"; then
-                    echo "✗ Error: Invalid age value '$AGE_DAYS'. Must be a positive integer."
-                    return 1
-                fi
-                shift
-                ;;
-            -*)
-                echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git_clean_stashes [--debug] [--age=days]"
-                echo "  --debug     Show debug information"
-                echo "  --age=days  Only show stashes older than X days (default: 60)"
-                return 1
-                ;;
-            *)
-                echo "✗ Error: Unexpected argument '$1'"
-                echo "Usage: git_clean_stashes [--debug] [--age=days]"
-                return 1
-                ;;
-        esac
-    done
+    # Parse command line arguments using shared utility
+    _git_parse_args "git_clean_stashes" "$@" || return 1
     
     _git_validate_all || return 1
     
@@ -993,7 +1001,11 @@ git_clean_stashes() {
     local stash_count=0
     
     # Use a temporary file to collect old stashes info
-    local temp_file="/tmp/git-clean-stashes-$$"
+    local temp_file
+    temp_file=$(mktemp -t git-clean-stashes.XXXXXX) || {
+        echo "✗ Error: Could not create temporary file"
+        return 1
+    }
     
     git stash list --format="%gd|%ct|%gs" 2>/dev/null | while IFS='|' read -r stash_ref stash_timestamp stash_msg; do
         if [ -n "$stash_ref" ] && [ -n "$stash_timestamp" ]; then
@@ -1043,7 +1055,12 @@ git_clean_stashes() {
     local failed_count=0
     
     # Create a sorted copy for deletion (highest index first to avoid reference shifting)
-    local temp_delete_file="/tmp/git-clean-stashes-delete-$$"
+    local temp_delete_file
+    temp_delete_file=$(mktemp -t git-clean-stashes-delete.XXXXXX) || {
+        echo "✗ Error: Could not create temporary file"
+        [ -f "$temp_file" ] && rm -f "$temp_file"
+        return 1
+    }
     sort -t'{' -k2 -nr "$temp_file" > "$temp_delete_file"
     
     while IFS='|' read -r stash_ref age_days stash_date stash_msg; do
@@ -1075,47 +1092,19 @@ git_clean_stashes() {
 git_status() {
     # Temporarily disable debug output
     local old_x_setting=""
-    if [[ $- == *x* ]]; then
-        old_x_setting="x"
-        set +x
-    fi
+    case $- in
+        *x*) 
+            old_x_setting="x"
+            set +x
+            ;;
+    esac
+    
+    # Parse command line arguments using shared utility
+    _git_parse_args "git_status" "$@" || return 1
     
     _git_validate_all || return 1
 
-    local VERBOSE_MODE=""
-    local TARGET_BRANCH=""
     local CURRENT_BRANCH
-    local DEBUG_MODE=""
-    
-    # Parse command line arguments
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            -v)
-                VERBOSE_MODE="oneline"
-                shift
-                ;;
-            -vv)
-                VERBOSE_MODE="full"
-                shift
-                ;;
-            --debug)
-                DEBUG_MODE="true"
-                shift
-                ;;
-            -*)
-                echo "✗ Error: Unknown option '$1'"
-                echo "Usage: git_status [-v|-vv] [--debug] [branch-name]"
-                echo "  -v      Show commits since fork (feature branches) or pending commits (main/master/develop)"
-                echo "  -vv     Show full commits since fork (feature branches) or pending commits (main/master/develop)"
-                echo "  --debug Show debug information about branch detection and logic flow"
-                return 1
-                ;;
-            *)
-                TARGET_BRANCH="$1"
-                shift
-                ;;
-        esac
-    done
     
     # If no branch specified, use current branch
     if [ -z "$TARGET_BRANCH" ]; then
@@ -1238,9 +1227,14 @@ git_status() {
     local BEST_BASE=""
     local BEST_DISTANCE=999999
     
+    # Pre-validate existing branches to avoid repeated git rev-parse calls
+    local existing_branches
+    existing_branches=$(git for-each-ref --format='%(refname:short)' refs/heads/ refs/remotes/ 2>/dev/null)
+    
     # Check common base branches first - prioritize develop over main for feature branches
     for candidate in develop main master origin/develop origin/main origin/master; do
-        if git rev-parse --verify "$candidate" >/dev/null 2>&1; then
+        # Quick check if branch exists using pre-validated list
+        if echo "$existing_branches" | grep -q "^$candidate$"; then
             merge_base=$(git merge-base "$TARGET_BRANCH" "$candidate" 2>/dev/null)
             if [ -n "$merge_base" ]; then
                 # Calculate distance from merge base to target branch  
@@ -1264,7 +1258,11 @@ git_status() {
     # If no good candidate found from common branches, check other branches
     if [ -z "$BEST_BASE" ] && [ -n "$BASE_CANDIDATES" ]; then
         # Use a temporary file to avoid subshell variable issues
-        local temp_file="/tmp/git-status-$$"
+        local temp_file
+        temp_file=$(mktemp -t git-status.XXXXXX) || {
+            echo "✗ Error: Could not create temporary file"
+            return 1
+        }
         echo "$BASE_CANDIDATES" > "$temp_file"
         
         while read -r candidate; do
