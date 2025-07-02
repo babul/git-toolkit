@@ -1877,6 +1877,202 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
+echo
+echo "=========================================="
+echo "TESTING: git_clean_stashes function"
+echo "=========================================="
+
+# Test 51: git_clean_stashes - Not in git repository
+echo -e "${YELLOW}[TEST]${NC} git_clean_stashes: Not in git repository"
+# Create test directory in system temp to ensure it's outside any git repo
+TEST_DIR="$(mktemp -d -t git-toolkit-test-clean-stashes-nogit-XXXXXX)"
+cd "$TEST_DIR" || exit 1
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+if ! OUTPUT=$(git_clean_stashes $DEBUG_MODE 2>&1) && echo "$OUTPUT" | grep -q "Error: Not a git repository"; then
+    echo -e "${GREEN}[PASS]${NC} git_clean_stashes correctly detected not in git repository"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo -e "${RED}[FAIL]${NC} git_clean_stashes should have detected not in git repository. Output: $OUTPUT"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cd "$SCRIPT_DIR"
+rm -rf "$TEST_DIR"
+
+# Test 52: git_clean_stashes - Repository with no commits
+echo -e "${YELLOW}[TEST]${NC} git_clean_stashes: Repository with no commits"
+TEST_DIR=$(setup_test_repo "clean-stashes-no-commits")
+cd "$TEST_DIR" || exit 1
+
+# Re-source to ensure functions are available
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Capture the output
+OUTPUT=$(git_clean_stashes 2>&1 || true)
+
+if echo "$OUTPUT" | grep -q "Repository has no commits"; then
+    echo -e "${GREEN}[PASS]${NC} git_clean_stashes correctly detects repository with no commits"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo -e "${RED}[FAIL]${NC} git_clean_stashes should detect repository with no commits. Output: $OUTPUT"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 53: git_clean_stashes - No stashes available
+echo -e "${YELLOW}[TEST]${NC} git_clean_stashes: No stashes available"
+TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-no-stashes")
+cd "$TEST_DIR" || exit 1
+
+# Re-source to ensure functions are available
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Capture the output
+OUTPUT=$(git_clean_stashes 2>&1)
+
+if echo "$OUTPUT" | grep -q "No stashes older than 60 days found"; then
+    echo -e "${GREEN}[PASS]${NC} git_clean_stashes correctly reports no stashes"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo -e "${RED}[FAIL]${NC} git_clean_stashes should report no stashes. Output: $OUTPUT"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 54: git_clean_stashes - Invalid age parameter
+echo -e "${YELLOW}[TEST]${NC} git_clean_stashes: Invalid age parameter"
+TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-invalid-age")
+cd "$TEST_DIR" || exit 1
+
+# Re-source to ensure functions are available
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Capture the output with invalid age
+OUTPUT=$(git_clean_stashes --age=invalid 2>&1 || true)
+
+if echo "$OUTPUT" | grep -q "Invalid age value"; then
+    echo -e "${GREEN}[PASS]${NC} git_clean_stashes correctly rejects invalid age"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo -e "${RED}[FAIL]${NC} git_clean_stashes should reject invalid age. Output: $OUTPUT"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 55: git_clean_stashes - Cancel cleanup operation
+echo -e "${YELLOW}[TEST]${NC} git_clean_stashes: Cancel cleanup operation"
+TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-cancel")
+cd "$TEST_DIR" || exit 1
+
+# Re-source to ensure functions are available
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Create a stash that appears old by modifying the stash's commit time
+echo "test change" > test_file.txt
+git add test_file.txt
+git stash push -m "old test stash"
+
+# Wait a moment to ensure timestamp difference
+sleep 1
+
+# Try to clean with age=0 and simulate user cancellation
+OUTPUT=$(printf "n\n" | git_clean_stashes --age=0 2>&1)
+
+if echo "$OUTPUT" | grep -q "Stash cleanup cancelled"; then
+    echo -e "${GREEN}[PASS]${NC} git_clean_stashes correctly handles user cancellation"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo -e "${RED}[FAIL]${NC} git_clean_stashes should handle cancellation. Output: $OUTPUT"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 56: git_clean_stashes - No old stashes (all recent)
+echo -e "${YELLOW}[TEST]${NC} git_clean_stashes: No old stashes (all recent)"
+TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-no-old")
+cd "$TEST_DIR" || exit 1
+
+# Re-source to ensure functions are available
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Create a recent stash
+echo "test change" > test_file.txt
+git add test_file.txt
+git stash push -m "recent test stash"
+
+# Clean with default age (60 days) - should find no old stashes
+OUTPUT=$(git_clean_stashes 2>&1)
+
+if echo "$OUTPUT" | grep -q "No stashes older than 60 days found"; then
+    echo -e "${GREEN}[PASS]${NC} git_clean_stashes correctly reports no old stashes"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo -e "${RED}[FAIL]${NC} git_clean_stashes should report no old stashes. Output: $OUTPUT"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 57: git_clean_stashes - Successfully clean old stashes
+echo -e "${YELLOW}[TEST]${NC} git_clean_stashes: Successfully clean old stashes"
+TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-success")
+cd "$TEST_DIR" || exit 1
+
+# Re-source to ensure functions are available
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Create a stash and clean with age=0 to simulate old stash
+echo "test change" > test_file.txt
+git add test_file.txt
+git stash push -m "test stash to clean"
+
+# Get initial stash count
+INITIAL_COUNT=$(git stash list 2>/dev/null | wc -l)
+
+# Wait a moment to ensure timestamp difference
+sleep 1
+
+# Clean with age=0 and confirm
+OUTPUT=$(printf "y\n" | git_clean_stashes --age=0 2>&1)
+
+# Check if stash was deleted
+FINAL_COUNT=$(git stash list 2>/dev/null | wc -l)
+
+if echo "$OUTPUT" | grep -q "Successfully deleted 1 stash" && [ "$FINAL_COUNT" -lt "$INITIAL_COUNT" ]; then
+    echo -e "${GREEN}[PASS]${NC} git_clean_stashes successfully cleaned old stashes"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo -e "${RED}[FAIL]${NC} git_clean_stashes should clean old stashes. Output: $OUTPUT"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 58: git_clean_stashes - Debug mode output
+echo -e "${YELLOW}[TEST]${NC} git_clean_stashes: Debug mode output"
+TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-debug")
+cd "$TEST_DIR" || exit 1
+
+# Re-source to ensure functions are available
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Create a stash for testing
+echo "debug test" > debug_file.txt
+git add debug_file.txt
+git stash push -m "debug test stash"
+
+# Test debug output
+OUTPUT=$(git_clean_stashes --debug --age=0 2>&1)
+
+if echo "$OUTPUT" | grep -q "=== DEBUG MODE ===" && \
+   echo "$OUTPUT" | grep -q "Age threshold:" && \
+   echo "$OUTPUT" | grep -q "Total stashes:"; then
+    echo -e "${GREEN}[PASS]${NC} git_clean_stashes debug mode works correctly"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo -e "${RED}[FAIL]${NC} git_clean_stashes debug mode should show debug info. Output: $OUTPUT"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
 # Cleanup and results
 echo
 echo "==============================================="

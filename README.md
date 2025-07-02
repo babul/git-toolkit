@@ -14,7 +14,7 @@ PRs welcome!
 
 ## Overview
 
-This toolkit provides six essential Git utilities:
+This toolkit provides seven essential Git utilities:
 
 | Function | Purpose                                                                                    | Key Benefits |
 |----------|--------------------------------------------------------------------------------------------|--------------|
@@ -24,6 +24,7 @@ This toolkit provides six essential Git utilities:
 | **`git-clean-branches`** | Clean up merged and orphaned branches with detailed previews                               | Branch protection, detailed reporting, selective cleanup |
 | **`git-squash`** | Squash all commits in current branch into the oldest commit                                | Interactive commit message editing, preserves authorship, uses current date |
 | **`git-status`** | Show count of commits and untracked files, what branch any feature branch forked from      | Smart base detection, verbose commit history, develop preference |
+| **`git-clean-stashes`** | Clean up old stashes from your repository with age-based filtering                    | Age-based filtering, preview before deletion, batch operations |
 
 All functions follow the same safe pattern: show what will happen, ask for confirmation, then execute with clear feedback.
 
@@ -135,6 +136,24 @@ git-status [options] [branch-name]
 - Prefers develop over main when both are equidistant for feature branches
 - Shows commit history with verbose options for both branch types
 - Suppresses debug output for clean results
+
+### git-clean-stashes
+Clean up old stashes from your repository based on age.
+
+```bash
+git-clean-stashes [options]
+```
+
+**Options:**
+- `--age=days` Only show stashes older than X days (default: 60)
+- `--debug` Show debug information including timestamps and stash counts
+
+**Features:**
+- **Age-based filtering**: Default 60 days, customizable with --age parameter
+- **Safe deletion**: Shows preview of all stashes to be deleted before confirmation
+- **Batch operations**: Deletes multiple stashes in correct order to avoid reference issues
+- **Detailed preview**: Shows stash age, creation date, and message
+- **Success reporting**: Reports number of stashes successfully deleted
 
 ## Examples
 
@@ -312,6 +331,48 @@ Date: Tue Jan 16 11:15:00 2024 -0500
     - Improve mobile responsiveness
 ```
 
+### git-clean-stashes
+```bash
+# Default usage - clean stashes older than 60 days
+$ git-clean-stashes
+Found 3 stash(es) older than 60 days:
+
+  Stash: stash@{1}
+  Age: 174 days (created: 2024-05-30 12:38:32)
+  Message: On main: Fork autostash May 30, 2024 at 12:38 PM
+
+  Stash: stash@{2}
+  Age: 397 days (created: 2023-12-31 09:15:42)
+  Message: WIP on develop: b8ba715 use prince.aliada.io instead of app.posthog.com
+
+  Stash: stash@{3}
+  Age: 418 days (created: 2023-12-10 14:22:15)
+  Message: On main: Checkout autostash Dec 10, 2023 at 2:22 PM
+
+Proceed with deleting these 3 old stash(es)? (y/N): y
+✓ Deleted stash: stash@{3}
+✓ Deleted stash: stash@{2}
+✓ Deleted stash: stash@{1}
+
+✓ Successfully deleted 3 stash(es)
+
+# Custom age - clean stashes older than 30 days
+$ git-clean-stashes --age=30
+Found 5 stash(es) older than 30 days:
+...
+
+# Debug mode
+$ git-clean-stashes --debug --age=90
+=== DEBUG MODE ===
+Age threshold: 90 days
+Current timestamp: 1735689600
+Cutoff timestamp: 1727913600
+Total stashes: 12
+==================
+Found 2 stash(es) older than 90 days:
+...
+```
+
 ### Error scenarios
 ```bash
 # Not in a git repository
@@ -332,6 +393,10 @@ $ git-status -x
 Usage: git-status [-v|-vv] [branch-name]
   -v   Show commits since fork (feature branches) or pending commits (main/master/develop)
   -vv  Show full commits since fork (feature branches) or pending commits (main/master/develop)
+
+# git-clean-stashes invalid age
+$ git-clean-stashes --age=abc
+✗ Error: Invalid age value 'abc'. Must be a positive integer.
 ```
 
 ## Architecture & Design
@@ -368,11 +433,11 @@ Run tests in debug mode for troubleshooting:
 ```
 
 **Test coverage includes:**
-- All six functions (`git-undo`, `git-redo`, `git-stash`, `git-clean-branches`, `git-squash`, `git-status`)
+- All seven functions (`git-undo`, `git-redo`, `git-stash`, `git-clean-branches`, `git-squash`, `git-status`, `git-clean-stashes`)
 - Error conditions and edge cases
 - User interaction scenarios (confirmation, cancellation)
 - Cross-platform compatibility validation
-- **63 total tests** with colored pass/fail output
+- **69 total tests** with colored pass/fail output
 
 ### Test Output Example
 
@@ -533,14 +598,14 @@ TESTING: git_status function
 [PASS] git_status correctly preferred develop over main
 
 ===============================================
-Test Results: 63 passed, 0 failed
+Test Results: 69 passed, 0 failed
 ===============================================
 All tests passed!
 ```
 
 ### Test Coverage Breakdown
 
-The test suite provides comprehensive coverage across **63 tests** organized into **8 categories**:
+The test suite provides comprehensive coverage across **69 tests** organized into **8 categories**:
 
 | **Category** | **Tests** | **Coverage** |
 |---|---|---|
@@ -551,11 +616,12 @@ The test suite provides comprehensive coverage across **63 tests** organized int
 | **git_redo function** | 9 | Stash restoration, user selection, working directory checks |
 | **git_squash function** | 8 | Commit consolidation, editor integration, branch protection |
 | **git_status function** | 13 | Fork detection, verbose modes, main branch pending commits, branch validation |
+| **git_clean_stashes function** | 8 | Age filtering, batch deletion, user cancellation, debug mode |
 
 **Test Types:**
-- **Error condition tests** (20 tests): Repository validation, commit existence, permission checks
-- **Safety mechanism tests** (15 tests): Working directory protection, branch safeguards, user confirmation
-- **Core functionality tests** (18 tests): Primary operations, data integrity, expected behaviors, timestamp edge cases, main branch pending commits
+- **Error condition tests** (22 tests): Repository validation, commit existence, permission checks
+- **Safety mechanism tests** (17 tests): Working directory protection, branch safeguards, user confirmation
+- **Core functionality tests** (20 tests): Primary operations, data integrity, expected behaviors, timestamp edge cases, main branch pending commits
 - **User interaction tests** (10 tests): Cancellation handling, input validation, confirmation prompts
 
 **Key Test Scenarios:**
@@ -582,6 +648,7 @@ git-stash --debug
 git-clean-branches --debug
 git-squash --debug
 git-status --debug
+git-clean-stashes --debug
 ```
 
 Debug mode provides detailed diagnostic information including:
@@ -631,6 +698,14 @@ Debug mode provides detailed diagnostic information including:
 - **Flexible usage**: Works with current branch or specified branch name
 - **Debug mode**: Detailed diagnostic information available with `--debug` flag
 
+### git-clean-stashes
+- **Age-based filtering**: Customizable age threshold for stash cleanup (default 60 days)
+- **Batch operations**: Efficiently deletes multiple stashes in correct order
+- **Reference management**: Handles stash reference shifting during deletion
+- **Preview functionality**: Shows detailed information before deletion
+- **Progress reporting**: Real-time feedback during deletion process
+- **Debug information**: Timestamps, counts, and processing details
+
 ## Limitations
 
 ### git-undo
@@ -660,6 +735,12 @@ Debug mode provides detailed diagnostic information including:
 - **Feature branches**: May not detect correct base if branch history is complex or rebased  
 - **Main branches**: Pending commit detection requires remote tracking branch for accurate count
 - Verbose modes (-v/-vv) require commits to exist since fork point or in branch history
+
+### git-clean-stashes
+- Requires commits to exist (cannot work in empty repository)
+- Cannot recover stashes after deletion (permanent operation)
+- Age calculation based on stash creation timestamp
+- No filtering by stash content or branch name (age-based only)
 
 ## Contributing
 

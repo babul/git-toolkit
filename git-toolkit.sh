@@ -856,6 +856,151 @@ git_squash() {
     rm -f "$temp_commit_msg"
 }
 
+git_clean_stashes() {
+    local DEBUG_MODE=""
+    local AGE_DAYS=60
+    
+    # Parse command line arguments
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --debug)
+                DEBUG_MODE="true"
+                shift
+                ;;
+            --age=*)
+                AGE_DAYS=$(echo "$1" | sed 's/--age=//')
+                if ! echo "$AGE_DAYS" | grep -q "^[0-9]\+$"; then
+                    echo "✗ Error: Invalid age value '$AGE_DAYS'. Must be a positive integer."
+                    return 1
+                fi
+                shift
+                ;;
+            -*)
+                echo "✗ Error: Unknown option '$1'"
+                echo "Usage: git_clean_stashes [--debug] [--age=days]"
+                echo "  --debug     Show debug information"
+                echo "  --age=days  Only show stashes older than X days (default: 60)"
+                return 1
+                ;;
+            *)
+                echo "✗ Error: Unexpected argument '$1'"
+                echo "Usage: git_clean_stashes [--debug] [--age=days]"
+                return 1
+                ;;
+        esac
+    done
+    
+    _git_validate_all || return 1
+    
+    # Get current timestamp for age comparison
+    local CURRENT_TIMESTAMP
+    CURRENT_TIMESTAMP=$(date +%s 2>/dev/null)
+    if [ -z "$CURRENT_TIMESTAMP" ]; then
+        echo "✗ Error: Failed to get current timestamp"
+        return 1
+    fi
+    
+    # Calculate cutoff timestamp (AGE_DAYS ago)
+    local CUTOFF_TIMESTAMP
+    CUTOFF_TIMESTAMP=$((CURRENT_TIMESTAMP - AGE_DAYS * 24 * 3600))
+    
+    # Debug output
+    if [ "$DEBUG_MODE" = "true" ]; then
+        echo "=== DEBUG MODE ==="
+        echo "Age threshold: $AGE_DAYS days"
+        echo "Current timestamp: $CURRENT_TIMESTAMP"
+        echo "Cutoff timestamp: $CUTOFF_TIMESTAMP"
+        echo "Total stashes: $(git stash list 2>/dev/null | wc -l)"
+        echo "=================="
+    fi
+    
+    # Get all stashes and their creation timestamps
+    local OLD_STASHES=""
+    local stash_count=0
+    
+    # Use a temporary file to collect old stashes info
+    local temp_file="/tmp/git-clean-stashes-$$"
+    
+    git stash list --format="%gd|%ct|%gs" 2>/dev/null | while IFS='|' read -r stash_ref stash_timestamp stash_msg; do
+        if [ -n "$stash_ref" ] && [ -n "$stash_timestamp" ]; then
+            # Compare timestamps (stash_timestamp is in seconds since epoch)
+            if [ "$stash_timestamp" -lt "$CUTOFF_TIMESTAMP" ]; then
+                # Calculate age in days for display
+                local age_seconds=$((CURRENT_TIMESTAMP - stash_timestamp))
+                local age_days=$((age_seconds / 86400))
+                
+                # Format date for display
+                local stash_date
+                stash_date=$(date -r "$stash_timestamp" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "unknown date")
+                
+                echo "$stash_ref|$age_days|$stash_date|$stash_msg" >> "$temp_file"
+            fi
+        fi
+    done
+    
+    # Check if any old stashes were found
+    if [ ! -f "$temp_file" ] || [ ! -s "$temp_file" ]; then
+        rm -f "$temp_file"
+        echo "✓ No stashes older than $AGE_DAYS days found"
+        return 0
+    fi
+    
+    # Count old stashes
+    stash_count=$(wc -l < "$temp_file")
+    
+    echo "Found $stash_count stash(es) older than $AGE_DAYS days:"
+    echo
+    
+    # Display stashes to be deleted
+    while IFS='|' read -r stash_ref age_days stash_date stash_msg; do
+        if [ -n "$stash_ref" ]; then
+            echo "  Stash: $stash_ref"
+            echo "  Age: $age_days days (created: $stash_date)"
+            echo "  Message: $stash_msg"
+            echo
+        fi
+    done < "$temp_file"
+    
+    if ! _git_confirm_action "Proceed with deleting these $stash_count old stash(es)?"; then
+        echo "✗ Stash cleanup cancelled."
+        rm -f "$temp_file"
+        return 0
+    fi
+    
+    # Delete the old stashes (sort by stash index in reverse order to avoid reference shifting)
+    local deleted_count=0
+    local failed_count=0
+    
+    # Create a sorted copy for deletion (highest index first to avoid reference shifting)
+    local temp_delete_file="/tmp/git-clean-stashes-delete-$$"
+    sort -t'{' -k2 -nr "$temp_file" > "$temp_delete_file"
+    
+    while IFS='|' read -r stash_ref age_days stash_date stash_msg; do
+        if [ -n "$stash_ref" ]; then
+            if git stash drop "$stash_ref" > /dev/null 2>&1; then
+                echo "✓ Deleted stash: $stash_ref"
+                deleted_count=$((deleted_count + 1))
+            else
+                echo "✗ Failed to delete stash: $stash_ref"
+                failed_count=$((failed_count + 1))
+            fi
+        fi
+    done < "$temp_delete_file"
+    
+    rm -f "$temp_delete_file"
+    
+    # Cleanup temp file
+    rm -f "$temp_file"
+    
+    echo
+    if [ "$failed_count" -eq 0 ]; then
+        echo "✓ Successfully deleted $deleted_count stash(es)"
+    else
+        echo "✓ Deleted $deleted_count stash(es), failed to delete $failed_count stash(es)"
+        return 1
+    fi
+}
+
 git_status() {
     # Temporarily disable debug output
     local old_x_setting=""
@@ -1123,6 +1268,7 @@ if [ -n "$BASH_VERSION" ] || [ -n "$ZSH_VERSION" ]; then
         alias git-undo='git_undo'
         alias git-stash='git_stash'
         alias git-clean-branches='git_clean_branches'
+        alias git-clean-stashes='git_clean_stashes'
         alias git-redo='git_redo'
         alias git-squash='git_squash'
         alias git-status='git_status'
