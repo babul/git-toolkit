@@ -1,6 +1,10 @@
 # git-toolkit
 
 [![Test Suite](https://github.com/babul/git-toolkit/actions/workflows/test.yml/badge.svg)](https://github.com/babul/git-toolkit/actions/workflows/test.yml)
+[![Ubuntu](https://img.shields.io/badge/Ubuntu-tested-brightgreen)](https://github.com/babul/git-toolkit/actions/workflows/test.yml)
+[![macOS](https://img.shields.io/badge/macOS-tested-brightgreen)](https://github.com/babul/git-toolkit/actions/workflows/test.yml)
+[![bash](https://img.shields.io/badge/bash-compatible-blue)](https://github.com/babul/git-toolkit/actions/workflows/test.yml)
+[![POSIX sh](https://img.shields.io/badge/POSIX%20sh-compatible-blue)](https://github.com/babul/git-toolkit/actions/workflows/test.yml)
 
 An opinionated collection of cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches while preserving your work with a test suite to ensure safety.
 
