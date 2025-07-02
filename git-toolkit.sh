@@ -420,7 +420,7 @@ git_undo() {
     # Create stash - this should now include the metadata file and all reset changes
     if ! git stash push -m "$STASH_MSG"; then
         echo "✗ Error: Failed to create stash with metadata"
-        rm -f "$temp_metadata"
+        [ -f "$temp_metadata" ] && rm -f "$temp_metadata"
         return 1
     fi
     
@@ -430,19 +430,19 @@ git_undo() {
     # Verify stash was created successfully
     if [ -z "$STASH_NAME" ]; then
         echo "✗ Error: Stash was not created successfully"
-        rm -f "$temp_metadata"
+        [ -f "$temp_metadata" ] && rm -f "$temp_metadata"
         return 1
     fi
     
     # Verify metadata file is actually in the stash before cleanup
     if ! git stash show --name-only "$STASH_NAME" | grep -q "$temp_metadata"; then
         echo "✗ Error: Metadata file was not saved in stash"
-        rm -f "$temp_metadata"
+        [ -f "$temp_metadata" ] && rm -f "$temp_metadata"
         return 1
     fi
     
     # Safe to remove temp file now that we've verified it's in the stash
-    rm -f "$temp_metadata"
+    [ -f "$temp_metadata" ] && rm -f "$temp_metadata"
     echo ""
     echo "✓ Commit undone and changes stashed to $STASH_NAME"
 }
@@ -902,7 +902,7 @@ git_squash() {
     # Reset to merge base (soft reset to keep changes)
     if ! git reset --soft "$MERGE_BASE" 2>/dev/null; then
         echo "✗ Error: Failed to reset to merge base"
-        rm -f "$temp_commit_msg"
+        [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
         return 1
     fi
     
@@ -914,7 +914,7 @@ git_squash() {
     case "$EDITOR_CMD" in
         *\;*|*\&*|*\|*|*\$*|*\`*|*\(*|*\)*|*\{*|*\}*)
             echo "✗ Error: Editor command contains unsafe characters"
-            rm -f "$temp_commit_msg"
+            [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
             return 1
             ;;
     esac
@@ -931,7 +931,7 @@ git_squash() {
         echo "  Restoring branch to original state..."
         # Try to restore the branch
         git reset --hard HEAD@{1} > /dev/null 2>&1
-        rm -f "$temp_commit_msg"
+        [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
         return 1
     fi
     
@@ -943,7 +943,7 @@ git_squash() {
         echo "✗ Squash cancelled (empty commit message)."
         # Restore the branch
         git reset --hard HEAD@{1} > /dev/null 2>&1
-        rm -f "$temp_commit_msg"
+        [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
         return 0
     fi
     
@@ -960,12 +960,12 @@ git_squash() {
         echo "✗ Error: Failed to create squashed commit"
         # Try to restore the branch
         git reset --hard HEAD@{1} > /dev/null 2>&1
-        rm -f "$temp_commit_msg"
+        [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
         return 1
     fi
     
     # Cleanup
-    rm -f "$temp_commit_msg"
+    [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
 }
 
 git_clean_stashes() {
@@ -1046,7 +1046,7 @@ git_clean_stashes() {
     
     if ! _git_confirm_action "Proceed with deleting these $stash_count old stash(es)?"; then
         echo "✗ Stash cleanup cancelled."
-        rm -f "$temp_file"
+        [ -f "$temp_file" ] && rm -f "$temp_file"
         return 0
     fi
     
@@ -1281,7 +1281,7 @@ git_status() {
             fi
         done < "$temp_file"
         
-        rm -f "$temp_file"
+        [ -f "$temp_file" ] && rm -f "$temp_file"
     fi
     
     # Use the best base found

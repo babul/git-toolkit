@@ -185,6 +185,8 @@ rm -f "$temp_file"
 
 **When This Matters**: Particularly important in conditional cleanup scenarios where temp files may not have been created due to early returns or failed operations.
 
+**MANDATORY for All File Deletions**: This pattern MUST be used for ALL file deletion operations in the codebase, not just temp files. Any use of `rm -f` without a preceding file existence check is considered a bug and must be fixed. This ensures if `rm` is aliased (ex. `trash`) the user does not see a `path does not exist` error shown.
+
 ## Shell Debug Output Suppression
 
 **Debug Mode Isolation**: When shell debug mode (`set -x`) is active in the environment, variable assignments and function calls produce unwanted debug output. To suppress this for specific operations:
