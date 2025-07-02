@@ -388,7 +388,7 @@ if [ $exit_code -eq 0 ]; then
     
     # Check if metadata was stored in stash
     if git stash list -n 1 | grep -q "Second commit to undo"; then
-        stash_metadata=$(git show "stash@{0}":_undo_metadata_temp.txt 2>/dev/null || echo "")
+        stash_metadata=$(git show "stash@{0}":__metadata.txt 2>/dev/null || echo "")
         if [ -n "$stash_metadata" ] && echo "$stash_metadata" | grep -q "$commit_hash" && echo "$stash_metadata" | grep -q "Second commit to undo"; then
             printf "${GREEN}[PASS]${NC} Metadata was stored in stash with correct content\n"
             PASS_COUNT=$((PASS_COUNT + 1))
@@ -514,7 +514,7 @@ if echo "y" | git_undo > /dev/null 2>&1; then
     STASH_NAME=$(git stash list | head -1 | cut -d: -f1)
     if [ -n "$STASH_NAME" ]; then
         # Test that metadata file exists in stash
-        if git stash show --name-only "$STASH_NAME" | grep -q "_undo_metadata_temp.txt"; then
+        if git stash show --name-only "$STASH_NAME" | grep -q "__metadata.txt"; then
             # Test that full commit message is preserved
             if git stash show -p "$STASH_NAME" | grep -q "Multi-line commit message"; then
                 # Test that special characters are preserved

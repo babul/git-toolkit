@@ -398,7 +398,7 @@ git_undo() {
     git reset HEAD~1
     
     # Create temporary metadata file in working directory
-    local temp_metadata="_undo_metadata_temp.txt"
+    local temp_metadata="__metadata.txt"
     {
         echo "## Undo: $(_git_format_timestamp)"
         echo ""
