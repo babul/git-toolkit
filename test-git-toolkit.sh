@@ -1877,12 +1877,111 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
+# Test 51: git_status - Show deleted files with -v
+printf "${YELLOW}[TEST]${NC} git_status: Show deleted files with -v\n"
+TEST_DIR="$TEST_BASE_DIR/test-show-deleted-$$"
+mkdir -p "$TEST_DIR"
+cd "$TEST_DIR" || exit 1
+git init > /dev/null 2>&1
+git config user.name "Test User"
+git config user.email "test@example.com"
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Create and commit files
+echo "file1 content" > file1.txt
+echo "file2 content" > file2.txt
+git add file1.txt file2.txt
+git commit -m "Initial commit with two files" > /dev/null 2>&1
+
+# Delete file1 and modify file2
+rm file1.txt
+echo "modified content" >> file2.txt
+
+output=$(git_status $DEBUG_MODE -v 2>&1)
+# Strip ANSI color codes for comparison
+clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
+if echo "$clean_output" | grep -q "deleted:    file1.txt" && \
+   echo "$clean_output" | grep -q "modified:   file2.txt"; then
+    printf "${GREEN}[PASS]${NC} git_status -v correctly showed deleted and modified files\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_status -v failed to show deleted files properly. Output: $output\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 52: git_status - Show renamed files with -v
+printf "${YELLOW}[TEST]${NC} git_status: Show renamed files with -v\n"
+TEST_DIR="$TEST_BASE_DIR/test-show-renamed-$$"
+mkdir -p "$TEST_DIR"
+cd "$TEST_DIR" || exit 1
+git init > /dev/null 2>&1
+git config user.name "Test User"
+git config user.email "test@example.com"
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Create and commit a file
+echo "original content" > original.txt
+git add original.txt
+git commit -m "Initial commit with original file" > /dev/null 2>&1
+
+# Rename the file
+git mv original.txt renamed.txt
+
+output=$(git_status $DEBUG_MODE -v 2>&1)
+# Strip ANSI color codes for comparison
+clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
+if echo "$clean_output" | grep -q "renamed:    original.txt -> renamed.txt"; then
+    printf "${GREEN}[PASS]${NC} git_status -v correctly showed renamed file\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_status -v failed to show renamed file properly. Output: $output\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 53: git_stash - Show deleted and renamed files
+printf "${YELLOW}[TEST]${NC} git_stash: Show deleted and renamed files\n"
+TEST_DIR="$TEST_BASE_DIR/test-stash-deleted-renamed-$$"
+mkdir -p "$TEST_DIR"
+cd "$TEST_DIR" || exit 1
+git init > /dev/null 2>&1
+git config user.name "Test User"
+git config user.email "test@example.com"
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Create and commit files
+echo "file1 content" > file1.txt
+echo "file2 content" > file2.txt
+git add file1.txt file2.txt
+git commit -m "Initial commit" > /dev/null 2>&1
+
+# Delete file1, rename file2, and create new file
+rm file1.txt
+git mv file2.txt file2-renamed.txt
+echo "new file" > file3.txt
+
+# Capture stash output (respond 'n' to cancel)
+output=$(echo "n" | git_stash 2>&1)
+# Strip ANSI color codes for comparison
+clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
+if echo "$clean_output" | grep -q "deleted:    file1.txt" && \
+   echo "$clean_output" | grep -q "renamed:    file2.txt -> file2-renamed.txt" && \
+   echo "$clean_output" | grep -q "file3.txt"; then
+    printf "${GREEN}[PASS]${NC} git_stash correctly showed deleted, renamed, and new files\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_stash failed to show file changes properly. Output: $output\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
 echo
 echo "=========================================="
 echo "TESTING: git_clean_stashes function"
 echo "=========================================="
 
-# Test 51: git_clean_stashes - Not in git repository
+# Test 54: git_clean_stashes - Not in git repository
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: Not in git repository\n"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-clean-stashes-nogit-XXXXXX)"
@@ -1899,7 +1998,7 @@ fi
 cd "$SCRIPT_DIR"
 rm -rf "$TEST_DIR"
 
-# Test 52: git_clean_stashes - Repository with no commits
+# Test 55: git_clean_stashes - Repository with no commits
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: Repository with no commits\n"
 TEST_DIR=$(setup_test_repo "clean-stashes-no-commits")
 cd "$TEST_DIR" || exit 1
@@ -1919,7 +2018,7 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 53: git_clean_stashes - No stashes available
+# Test 56: git_clean_stashes - No stashes available
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: No stashes available\n"
 TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-no-stashes")
 cd "$TEST_DIR" || exit 1
@@ -1939,7 +2038,7 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 54: git_clean_stashes - Invalid age parameter
+# Test 57: git_clean_stashes - Invalid age parameter
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: Invalid age parameter\n"
 TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-invalid-age")
 cd "$TEST_DIR" || exit 1
@@ -1959,7 +2058,7 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 55: git_clean_stashes - Cancel cleanup operation
+# Test 58: git_clean_stashes - Cancel cleanup operation
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: Cancel cleanup operation\n"
 TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-cancel")
 cd "$TEST_DIR" || exit 1
@@ -1987,7 +2086,7 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 56: git_clean_stashes - No old stashes (all recent)
+# Test 59: git_clean_stashes - No old stashes (all recent)
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: No old stashes (all recent)\n"
 TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-no-old")
 cd "$TEST_DIR" || exit 1
@@ -2012,7 +2111,7 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 57: git_clean_stashes - Successfully clean old stashes
+# Test 60: git_clean_stashes - Successfully clean old stashes
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: Successfully clean old stashes\n"
 TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-success")
 cd "$TEST_DIR" || exit 1
@@ -2046,7 +2145,7 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 58: git_clean_stashes - Debug mode output
+# Test 61: git_clean_stashes - Debug mode output
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: Debug mode output\n"
 TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-debug")
 cd "$TEST_DIR" || exit 1

@@ -99,24 +99,39 @@ _git_validate_all() {
 _git_get_uncommitted_status() {
     local show_details="$1"
     local modified_count=0
+    local deleted_count=0
     local staged_count=0
     local untracked_count=0
     local total_count=0
     
-    # Get staged files
-    local staged_files
-    staged_files=$(git diff --cached --name-only 2>/dev/null)
-    if [ -n "$staged_files" ]; then
-        staged_count=$(echo "$staged_files" | wc -l)
+    # Get staged files with their status
+    local staged_files_with_status
+    staged_files_with_status=$(git diff --cached --name-status 2>/dev/null)
+    if [ -n "$staged_files_with_status" ]; then
+        staged_count=$(echo "$staged_files_with_status" | wc -l)
         total_count=$((total_count + staged_count))
     fi
     
-    # Get modified files
-    local modified_files
-    modified_files=$(git diff --name-only 2>/dev/null)
-    if [ -n "$modified_files" ]; then
-        modified_count=$(echo "$modified_files" | wc -l)
-        total_count=$((total_count + modified_count))
+    # Get modified and deleted files with their status
+    local modified_files_with_status
+    modified_files_with_status=$(git diff --name-status 2>/dev/null)
+    if [ -n "$modified_files_with_status" ]; then
+        # Count total files first
+        local working_tree_count
+        working_tree_count=$(echo "$modified_files_with_status" | wc -l)
+        total_count=$((total_count + working_tree_count))
+        
+        # Count modified vs deleted separately for display
+        if echo "$modified_files_with_status" | grep -q '^M'; then
+            modified_count=$(echo "$modified_files_with_status" | grep -c '^M')
+        else
+            modified_count=0
+        fi
+        if echo "$modified_files_with_status" | grep -q '^D'; then
+            deleted_count=$(echo "$modified_files_with_status" | grep -c '^D')
+        else
+            deleted_count=0
+        fi
     fi
     
     # Get untracked files
@@ -139,23 +154,48 @@ _git_get_uncommitted_status() {
         if [ "$staged_count" -gt 0 ]; then
             [ "$sections_shown" -gt 0 ] && echo
             printf "  \033[32mChanges to be committed:\033[0m\n"
-            echo "$staged_files" | sed 's/^/    /' | while read -r file; do
-                printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file"
+            echo "$staged_files_with_status" | while IFS=$'\t' read -r file_status file rest; do
+                case "$file_status" in
+                    M*) printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file" ;;
+                    A*) printf "    \033[32mnew file:   \033[32m%s\033[0m\n" "$file" ;;
+                    D*) printf "    \033[32mdeleted:    \033[32m%s\033[0m\n" "$file" ;;
+                    R*) 
+                        # For renames, 'file' contains old name and 'rest' contains new name
+                        if [ -n "$rest" ]; then
+                            printf "    \033[32mrenamed:    \033[32m%s -> %s\033[0m\n" "$file" "$rest"
+                        else
+                            printf "    \033[32mrenamed:    \033[32m%s\033[0m\n" "$file"
+                        fi
+                        ;;
+                    *) printf "    \033[32m%s:   \033[32m%s\033[0m\n" "$file_status" "$file" ;;
+                esac
             done
             sections_shown=$((sections_shown + 1))
         fi
-        if [ "$modified_count" -gt 0 ]; then
+        if [ "$modified_count" -gt 0 ] || [ "$deleted_count" -gt 0 ]; then
             [ "$sections_shown" -gt 0 ] && echo
             printf "  \033[31mChanges not staged for commit:\033[0m\n"
-            echo "$modified_files" | sed 's/^/    /' | while read -r file; do
-                printf "    \033[31mmodified:   \033[31m%s\033[0m\n" "$file"
+            echo "$modified_files_with_status" | while IFS=$'\t' read -r file_status file rest; do
+                case "$file_status" in
+                    M*) printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file" ;;
+                    D*) printf "    \033[31mdeleted:    \033[31m%s\033[0m\n" "$file" ;;
+                    R*) 
+                        # For renames, 'file' contains old name and 'rest' contains new name
+                        if [ -n "$rest" ]; then
+                            printf "    \033[32mrenamed:    \033[32m%s -> %s\033[0m\n" "$file" "$rest"
+                        else
+                            printf "    \033[32mrenamed:    \033[32m%s\033[0m\n" "$file"
+                        fi
+                        ;;
+                    *) printf "    \033[31m%s:   \033[31m%s\033[0m\n" "$file_status" "$file" ;;
+                esac
             done
             sections_shown=$((sections_shown + 1))
         fi
         if [ "$untracked_count" -gt 0 ]; then
             [ "$sections_shown" -gt 0 ] && echo
             printf "  \033[31mUntracked files:\033[0m\n"
-            echo "$untracked_files" | sed 's/^/    /' | while read -r file; do
+            echo "$untracked_files" | while read -r file; do
                 printf "    \033[31m%s\033[0m\n" "$file"
             done
             sections_shown=$((sections_shown + 1))
@@ -351,25 +391,50 @@ git_stash() {
     local sections_shown=0
     
     # Show staged files (green)
-    local staged_files
-    staged_files=$(git diff --cached --name-only 2>/dev/null)
-    if [ -n "$staged_files" ]; then
+    local staged_files_with_status
+    staged_files_with_status=$(git diff --cached --name-status 2>/dev/null)
+    if [ -n "$staged_files_with_status" ]; then
         [ "$sections_shown" -gt 0 ] && echo
         printf "  \033[32mChanges to be committed:\033[0m\n"
-        echo "$staged_files" | while read -r file; do
-            printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file"
+        echo "$staged_files_with_status" | while IFS=$'\t' read -r file_status file rest; do
+            case "$file_status" in
+                M*) printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file" ;;
+                A*) printf "    \033[32mnew file:   \033[32m%s\033[0m\n" "$file" ;;
+                D*) printf "    \033[32mdeleted:    \033[32m%s\033[0m\n" "$file" ;;
+                R*) 
+                    # For renames, 'file' contains old name and 'rest' contains new name
+                    if [ -n "$rest" ]; then
+                        printf "    \033[32mrenamed:    \033[32m%s -> %s\033[0m\n" "$file" "$rest"
+                    else
+                        printf "    \033[32mrenamed:    \033[32m%s\033[0m\n" "$file"
+                    fi
+                    ;;
+                *) printf "    \033[32m%s:   \033[32m%s\033[0m\n" "$file_status" "$file" ;;
+            esac
         done
         sections_shown=$((sections_shown + 1))
     fi
     
-    # Show modified files (red)
-    local modified_files
-    modified_files=$(git diff --name-only 2>/dev/null)
-    if [ -n "$modified_files" ]; then
+    # Show modified and deleted files (red)
+    local modified_files_with_status
+    modified_files_with_status=$(git diff --name-status 2>/dev/null)
+    if [ -n "$modified_files_with_status" ]; then
         [ "$sections_shown" -gt 0 ] && echo
         printf "  \033[31mChanges not staged for commit:\033[0m\n"
-        echo "$modified_files" | while read -r file; do
-            printf "    \033[31mmodified:   \033[31m%s\033[0m\n" "$file"
+        echo "$modified_files_with_status" | while IFS=$'\t' read -r file_status file rest; do
+            case "$file_status" in
+                M*) printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file" ;;
+                D*) printf "    \033[31mdeleted:    \033[31m%s\033[0m\n" "$file" ;;
+                R*) 
+                    # For renames, 'file' contains old name and 'rest' contains new name
+                    if [ -n "$rest" ]; then
+                        printf "    \033[32mrenamed:    \033[32m%s -> %s\033[0m\n" "$file" "$rest"
+                    else
+                        printf "    \033[32mrenamed:    \033[32m%s\033[0m\n" "$file"
+                    fi
+                    ;;
+                *) printf "    \033[31m%s:   \033[31m%s\033[0m\n" "$file_status" "$file" ;;
+            esac
         done
         sections_shown=$((sections_shown + 1))
     fi

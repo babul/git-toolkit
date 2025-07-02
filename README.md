@@ -32,10 +32,10 @@ This toolkit provides seven essential Git utilities:
 |----------|--------------------------------------------------------------------------------------------|--------------|
 | **`git-undo`** | Safely undo the last commit while preserving changes in a stash                            | Interactive preview, metadata preservation, safe rollback |
 | **`git-redo`** | Restore previously undone commits from undo stashes                                        | Smart stash detection, interactive selection, conflict-safe |
-| **`git-stash`** | Stash all changes (including untracked files) to get a clean working directory | Complete file coverage, preview mode, guaranteed clean state |
+| **`git-stash`** | Stash all changes (including untracked files) to get a clean working directory | Complete file coverage, enhanced file status display, guaranteed clean state |
 | **`git-clean-branches`** | Clean up merged and orphaned branches with detailed previews                               | Branch protection, detailed reporting, selective cleanup |
 | **`git-squash`** | Squash all commits in current branch into the oldest commit                                | Interactive commit message editing, preserves authorship, uses current date |
-| **`git-status`** | Show count of commits and untracked files, what branch any feature branch forked from      | Smart base detection, verbose commit history, develop preference |
+| **`git-status`** | Show count of commits and untracked files, what branch any feature branch forked from      | Smart base detection, enhanced file status display, develop preference |
 | **`git-clean-stashes`** | Clean up old stashes from your repository with age-based filtering                    | Age-based filtering, preview before deletion, batch operations |
 
 All functions follow the same safe pattern: show what will happen, ask for confirmation, then execute with clear feedback.
@@ -116,7 +116,9 @@ git-stash [message]
 
 **Features:**
 - Handles modified, staged, and untracked files
-- Shows preview of what will be stashed
+- Shows preview of what will be stashed with enhanced file status display
+- **Enhanced file status display**: Shows deleted, renamed, modified, and new files with color coding
+- **Visual file states**: Modified/renamed files in green, deleted/untracked files in red
 - Uses `--include-untracked` for complete cleanup (excludes ignored files)
 - Branch-named and timestamped stash messages for easy identification
 - Custom message support with automatic formatting
@@ -182,6 +184,8 @@ git-status [options] [branch-name]
 - **No remote**: Shows total commit count when no remote tracking branch exists
 - Prefers develop over main when both are equidistant for feature branches
 - Shows commit history with verbose options for both branch types
+- **Enhanced file status display**: Shows deleted, renamed, modified, and new files with color coding
+- **Visual file states**: Modified/renamed files in green, deleted/untracked files in red
 - Suppresses debug output for clean results
 
 ### git-clean-stashes
@@ -201,6 +205,29 @@ git-clean-stashes [options]
 - **Batch operations**: Deletes multiple stashes in correct order to avoid reference issues
 - **Detailed preview**: Shows stash age, creation date, and message
 - **Success reporting**: Reports number of stashes successfully deleted
+
+## Enhanced File Status Display
+
+Both `git-status` and `git-stash` now provide enhanced file status visualization with color coding:
+
+### File Status Types
+- **Modified files**: Show as `modified: filename.js` in green
+- **Renamed files**: Show as `renamed: old-name.js -> new-name.js` in green  
+- **Deleted files**: Show as `deleted: filename.js` in red
+- **New files**: Show as `new file: filename.js` in green when staged
+- **Untracked files**: Listed by filename in red
+
+### Color Scheme
+- **Green**: Positive changes (modified, renamed, new files)
+- **Red**: Items needing attention (deleted, untracked files)
+
+### Visual Organization
+Files are grouped into sections matching Git's standard output:
+- **Changes to be committed** (staged files)
+- **Changes not staged for commit** (unstaged modifications/deletions)
+- **Untracked files** (files not in Git)
+
+This enhanced display makes it easier to understand exactly what changes are present in your working directory and what will be affected by Git operations.
 
 ## Examples
 
@@ -253,18 +280,22 @@ $ git-stash
 Stashing all changes (including untracked files)...
 
 Files to be stashed:
-  Modified files:
-  src/main.js
-  Staged files:
-  src/utils.js
+  Changes to be committed:
+    renamed:    old-config.js -> config.js
+    new file:   utils.js
+
+  Changes not staged for commit:
+    modified:   main.js
+    deleted:    legacy.js
+
   Untracked files:
-  temp.txt
+    temp.txt
 
 Proceed with stashing all changes? (y/N): y
 ✓ All changes stashed successfully!
 Working directory is now clean.
 
-Changes saved in stash: stash@{0} ("stash feature-branch - 2024-01-15 10:30:00")
+Changes saved in stash: stash@{0} ("stash feature-branch")
 To restore: git stash apply stash@{0}
 ```
 
@@ -321,6 +352,18 @@ The bugfix/login-issue branch forked from main at commit 3f7a9e12
 # Feature branch - show commits since fork (one line each)
 $ git-status -v feature/analytics
 The feature/analytics branch forked from develop at commit 8ac50fd2
+
+Uncommitted changes:
+  Changes to be committed:
+    renamed:    old-config.js -> config.js
+    new file:   analytics.js
+
+  Changes not staged for commit:
+    modified:   main.js
+    deleted:    legacy.js
+
+  Untracked files:
+    temp.log
 
 Commits since fork:
 a1b2c3d Add event tracking
@@ -643,32 +686,38 @@ TESTING: git_status function
 [PASS] git_status correctly handled invalid option
 [TEST] git_status: Develop branch preference
 [PASS] git_status correctly preferred develop over main
+[TEST] git_status: Show deleted files with -v
+[PASS] git_status -v correctly showed deleted and modified files
+[TEST] git_status: Show renamed files with -v
+[PASS] git_status -v correctly showed renamed file
+[TEST] git_stash: Show deleted and renamed files
+[PASS] git_stash correctly showed deleted, renamed, and new files
 
 ===============================================
-Test Results: 69 passed, 0 failed
+Test Results: 74 passed, 0 failed
 ===============================================
 All tests passed!
 ```
 
 ### Test Coverage Breakdown
 
-The test suite provides comprehensive coverage across **69 tests** organized into **8 categories**:
+The test suite provides comprehensive coverage across **74 tests** organized into **8 categories**:
 
 | **Category** | **Tests** | **Coverage** |
 |---|---|---|
 | **Cross-platform compatibility** | 3 | Shell feature validation, timestamp edge cases, syntax compatibility |
 | **git_undo function** | 9 | Error conditions, user interactions, metadata preservation |
-| **git_stash function** | 10 | File type handling, clean state verification, branch naming |
+| **git_stash function** | 11 | File type handling, clean state verification, branch naming, deleted/renamed files |
 | **git_clean_branches function** | 11 | Branch detection, protection logic, deletion safety |
 | **git_redo function** | 9 | Stash restoration, user selection, working directory checks |
 | **git_squash function** | 8 | Commit consolidation, editor integration, branch protection |
-| **git_status function** | 13 | Fork detection, verbose modes, main branch pending commits, branch validation |
+| **git_status function** | 15 | Fork detection, verbose modes, main branch pending commits, branch validation, deleted/renamed files |
 | **git_clean_stashes function** | 8 | Age filtering, batch deletion, user cancellation, debug mode |
 
 **Test Types:**
 - **Error condition tests** (22 tests): Repository validation, commit existence, permission checks
 - **Safety mechanism tests** (17 tests): Working directory protection, branch safeguards, user confirmation
-- **Core functionality tests** (20 tests): Primary operations, data integrity, expected behaviors, timestamp edge cases, main branch pending commits
+- **Core functionality tests** (25 tests): Primary operations, data integrity, expected behaviors, timestamp edge cases, main branch pending commits, deleted/renamed file detection
 - **User interaction tests** (10 tests): Cancellation handling, input validation, confirmation prompts
 
 **Key Test Scenarios:**

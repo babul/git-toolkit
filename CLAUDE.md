@@ -35,7 +35,7 @@ This is a bash-based Git toolkit that provides seven core safety-first utilities
 
 ### Testing
 ```bash
-# Run full test suite (69 tests across 8 categories)
+# Run full test suite (74 tests across 8 categories)
 ./test-git-toolkit.sh
 
 # ALWAYS test under both bash and POSIX sh for maximum compatibility
@@ -48,6 +48,8 @@ sh ./test-git-toolkit.sh --debug
 
 # Test specific function (modify test script to run individual test blocks)
 # Tests are organized by function in the script with clear section headers
+
+**Always** run test and debugs within a folder under ./tests/. This folder is in .gitignore so it will not be interferred with.
 ```
 
 ### Installation & Usage
@@ -75,7 +77,7 @@ echo "source $(pwd)/git-toolkit.sh" >> ~/.bashrc
 
 **Isolated Test Environment**: Each test creates temporary directories under `tests/test-*-$$` to avoid interfering with the parent git repository.
 
-**Test Categories**: 63 tests organized into 8 categories covering error conditions, user interactions, safety mechanisms, and core functionality.
+**Test Categories**: 74 tests organized into 8 categories covering error conditions, user interactions, safety mechanisms, and core functionality.
 
 **Cross-Platform Testing**: Validates POSIX compliance, shell syntax compatibility, and timestamp edge cases.
 
@@ -83,7 +85,7 @@ echo "source $(pwd)/git-toolkit.sh" >> ~/.bashrc
 
 **Test Requirements**: When writing or updating code, always write adequate tests and add them to `test-git-toolkit.sh`. If any tests are updated or added, always update the README.md test output section from the actual test script output (not derived), and update the test breakdown with accurate counts and categories.
 
-**Dual Shell Testing**: ALWAYS run tests under both `bash` and `sh` to ensure POSIX compatibility. Both shells must pass all 63 tests. Any code changes must be validated against both environments before considering the work complete.
+**Dual Shell Testing**: ALWAYS run tests under both `bash` and `sh` to ensure POSIX compatibility. Both shells must pass all 74 tests. Any code changes must be validated against both environments before considering the work complete.
 
 **Branch Agnostic Testing**: Tests must work in any Git environment regardless of default branch naming conventions. Never assume "main" or "master" - always detect the actual branch name dynamically.
 
@@ -210,3 +212,44 @@ _function_quiet() {
 - Complete isolation from parent shell's `set -x` mode  
 - No complex debug enable/disable logic needed
 - Works reliably across all shell environments
+
+## Git File Status Detection
+
+**File Status Commands**: When showing uncommitted changes, use `git diff --name-status` instead of `git diff --name-only` to get file status information:
+- **Status Codes**: `M` (modified), `D` (deleted), `A` (added), `R` (renamed)
+- **Renamed File Format**: For renames, Git outputs `R<percentage>\told-name\tnew-name` (tab-delimited)
+- **Parsing**: Use `IFS=$'\t'` with `read -r` to properly parse tab-delimited output
+
+**Reserved Variable Conflicts**: 
+- **Problem**: The variable name `status` is read-only in some shells (like zsh)
+- **Solution**: Use descriptive names like `file_status` instead of generic `status`
+- **Detection**: Error message "read-only variable: status" indicates this issue
+
+**Display Formatting Best Practices**:
+- Show file status type before filename: `deleted:    filename.txt`
+- Use consistent spacing for alignment across different status types
+- Match Git's standard color scheme: green for staged, red for unstaged
+- Handle renamed files specially: `renamed:    old-name -> new-name`
+
+**Implementation Pattern**:
+```bash
+# Get files with status information
+local staged_files_with_status
+staged_files_with_status=$(git diff --cached --name-status 2>/dev/null)
+
+# Parse with proper tab handling
+echo "$staged_files_with_status" | while IFS=$'\t' read -r file_status file rest; do
+    case "$file_status" in
+        M*) printf "    modified:   %s\n" "$file" ;;
+        D*) printf "    deleted:    %s\n" "$file" ;;
+        R*) printf "    renamed:    %s -> %s\n" "$file" "$rest" ;;
+        # ... other cases
+    esac
+done
+```
+
+**Testing Considerations**:
+- Always test with actual deleted files (`rm file.txt`) not just staged deletions
+- Test renamed files with `git mv old-name new-name`
+- Verify both staged and unstaged changes are displayed correctly
+- Check that mixed states (e.g., staged rename + unstaged modification) work properly
