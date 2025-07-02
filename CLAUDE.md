@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a bash-based Git toolkit that provides six core safety-first utilities for Git operations:
+This is a bash-based Git toolkit that provides seven core safety-first utilities for Git operations:
 - `git-undo`: Safely undo commits while preserving changes in stashes
 - `git-redo`: Restore previously undone commits from undo stashes  
 - `git-stash`: Stash all changes including untracked and ignored files
 - `git-clean-branches`: Clean up merged and orphaned branches
 - `git-squash`: Squash all commits in a branch into the oldest commit
 - `git-status`: Show branch fork points and pending commits
+- `git-clean-stashes`: Clean up old stashes with age-based filtering
 
 ## Architecture
 
@@ -34,7 +35,7 @@ This is a bash-based Git toolkit that provides six core safety-first utilities f
 
 ### Testing
 ```bash
-# Run full test suite (63 tests across 8 categories)
+# Run full test suite (69 tests across 8 categories)
 ./test-git-toolkit.sh
 
 # ALWAYS test under both bash and POSIX sh for maximum compatibility
@@ -131,3 +132,42 @@ Functions use POSIX-compliant syntax with specific considerations:
 - Capture branch name early in each test: `DEFAULT_BRANCH=$(get_default_branch)`
 - Never hardcode branch names in assertions, error messages, or user output
 - Use generic terminology in test descriptions to avoid environment assumptions
+
+## Cross-Platform Date Handling
+
+**Date Command Portability**: Different Unix-like systems have different date command syntax for timestamp conversion:
+- **GNU/Linux**: `date -d "@timestamp"` to convert Unix timestamps
+- **BSD/macOS**: `date -r timestamp` to convert Unix timestamps  
+- **Portable Solution**: Use fallback chain: `date -d "@$timestamp" 2>/dev/null || date -r "$timestamp" 2>/dev/null || echo "fallback"`
+
+**Git Stash Timestamps**: When working with `git stash list --format="%ct"`, timestamps are in Unix epoch format and require conversion for user display.
+
+**Debug Output Prevention**: Some date commands may produce debug output in certain shell environments. Always redirect stderr with `2>/dev/null` and provide fallbacks.
+
+## Stash Reference Management
+
+**Stash Index Shifting**: When deleting multiple stashes, git re-indexes remaining stashes, causing reference conflicts:
+- **Problem**: Deleting `stash@{1}` makes `stash@{2}` become `stash@{1}`, breaking subsequent deletions
+- **Solution**: Always delete from highest index to lowest (`stash@{3}` → `stash@{2}` → `stash@{1}` → `stash@{0}`)
+- **Implementation**: Use `sort -t'{' -k2 -nr` to sort stash references in descending order
+
+**Stash Deletion Best Practices**:
+- Collect all stash references first, then sort by index
+- Delete in reverse order to avoid reference shifting
+- Use temporary files to avoid subshell variable scope issues
+- Provide clear progress feedback during batch operations
+
+**Safe Stash Processing**: 
+- Always validate stash references exist before deletion attempts
+- Handle partial failures gracefully (some stashes deleted, others failed)
+- Report accurate counts of successful vs failed deletions
+
+## Temp File Management
+
+**Working Directory vs System Temp**:
+- **Working Directory**: Use only when files must be added to git (e.g., `git_undo` metadata)
+- **System Temp (`/tmp/`)**: Use for processing files that don't need to be in git
+- **Process ID Suffix**: Always use `$$` suffix for uniqueness: `/tmp/git-toolkit-operation-$$`
+- **Cleanup**: Always clean up temp files in all code paths (success, failure, cancellation)
+
+**NEVER** create temp files in repository root - always use isolated test directories or system temp.

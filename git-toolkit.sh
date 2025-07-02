@@ -929,9 +929,9 @@ git_clean_stashes() {
                 local age_seconds=$((CURRENT_TIMESTAMP - stash_timestamp))
                 local age_days=$((age_seconds / 86400))
                 
-                # Format date for display
+                # Format date for display (use portable date command)
                 local stash_date
-                stash_date=$(date -r "$stash_timestamp" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "unknown date")
+                stash_date=$(date -d "@$stash_timestamp" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -r "$stash_timestamp" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "unknown date")
                 
                 echo "$stash_ref|$age_days|$stash_date|$stash_msg" >> "$temp_file"
             fi
