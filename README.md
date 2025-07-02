@@ -6,13 +6,13 @@
 [![bash](https://img.shields.io/badge/bash-compatible-blue)](https://github.com/babul/git-toolkit/actions/workflows/test.yml)
 [![POSIX sh](https://img.shields.io/badge/POSIX%20sh-compatible-blue)](https://github.com/babul/git-toolkit/actions/workflows/test.yml)
 
-An opinionated collection of cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches while preserving your work with a test suite to ensure safety.
+An opinionated collection of cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches, etc. while preserving your work with a test suite to ensure safety.
 
-The goal with these utilities is to make getting to a clean working state in any branch safe and easy, while still letting you be as creative/productive as you need to be. With these new AI coding tools (like Claude Code), I know I need to work smarter also.
+The goal of these utilities is to make getting to a clean working state in any branch safe and easy, while still allowing you to be as creative and productive as you need to be.
 
 USE AT YOUR OWN RISK! (I use them every day, but of course, YMMV). 
 
-Built with the assistance of Claude Code. `CLAUDE.md` is included for your own review.
+Built with the assistance of Claude Code. `CLAUDE.md` is included.
 
 I am on a Mac Sequoia 15.5 (Silicon) using Warp terminal. I've tried to keep these functions as portable as possible. If you have an issue, run the test script in debug mode and post an Issue on GitHub in this repository.
 
@@ -36,21 +36,49 @@ All functions follow the same safe pattern: show what will happen, ask for confi
 
 ## Installation
 
-1. Clone this repository:
+All you need is the main script, `git-toolkit.sh`. Just add it to your shell and restart your terminal. The steps below cover the basics, but if you run into any issues or your setup is a bit different, a quick search for your operating system’s specifics should point you in the right direction.
+
+## MacOS / zsh
+
+Here is copy/paste instructions for any `zsh` shell. `zsh` has been the default shell on macOS since 2019 Catalina.
+
+1. Download the script to your user folder
    ```bash
-   git clone https://github.com/yourusername/git-toolkit.git
-   cd git-toolkit
+   curl -L -o ~/git-toolkit.sh https://raw.githubusercontent.com/babul/git-toolkit/main/git-toolkit.sh
    ```
 
-2. Source the script in your shell:
+2. Load the script into your shell:
    ```bash
-   source git-toolkit.sh
+   source ~/git-toolkit.sh
    ```
 
-3. Or add it to your shell configuration file (`.bashrc`, `.zshrc`, etc.):
+3. Add the script to your shell configuration file so it loads automatically.
    ```bash
-   echo "source /path/to/git-toolkit.sh" >> ~/.bashrc
+   echo 'source ~/git-toolkit.sh' >> ~/.zshrc
    ```
+   
+4. To update script just repeat steps 1 & 2
+
+## Ubuntu / bash
+
+Here is copy/paste instructions for any `bash` shell. macOS systems older than Catalina are using `bash`.
+
+1. Download the script to your user folder
+   ```bash
+   curl -L -o ~/git-toolkit.sh https://raw.githubusercontent.com/babul/git-toolkit/main/git-toolkit.sh
+   ```
+   
+2. Load the script into your shell:
+   ```bash
+   source ~/git-toolkit.sh
+   ```
+   
+3. Add the script to your shell configuration file so it loads automatically.
+   ```bash
+   echo 'source ~/git-toolkit.sh' >> ~/.bashrc
+   ```
+
+4. To update script just repeat steps 1 & 2
 
 ## Functions
 
@@ -67,18 +95,25 @@ git-undo
 - Protects against undoing initial commits
 - Requires clean working directory
 
+**Note:**
+- This only works for commits that you have not pushed up!
+
 ### git-stash  
-Stash all changes including untracked files to get a clean branch.
+Stash all changes, including untracked files to get a clean branch.
 
 ```bash
-git-stash
+git-stash [message]
 ```
+
+**Options:**
+- `message` Optional custom message to include in the stash name (space-separated words will be formatted)
 
 **Features:**
 - Handles modified, staged, and untracked files
 - Shows preview of what will be stashed
 - Uses `--include-untracked` for complete cleanup (excludes ignored files)
 - Branch-named and timestamped stash messages for easy identification
+- Custom message support with automatic formatting
 
 ### git-redo
 Restore previously undone commits by selecting from available undo stashes.
@@ -88,14 +123,14 @@ git-redo
 ```
 
 **Features:**
-- Lists all available undo operations with details
+- Lists all available previous git-undo operations with details
 - Shows commit message, timestamp, and original hash
 - Interactive selection of which undo to restore
 - Applies changes to working directory (not as commit)
 - Preserves stash for potential future use
 
 ### git-clean-branches
-Clean up merged branches and branches gone from remote.
+Clean up merged branches and branches closed or deleted from remote.
 
 ```bash
 git-clean-branches
@@ -758,7 +793,9 @@ Contributions are welcome! Please:
 
 ## Project History
 
-I prefer using a standalone Git GUI tool—my favorite is https://git-fork.com/ most of my Git workflows. A while ago, I created a simple `git-undo` bash function to solve one of my recurring pain points. Thanks to Claude Code, I was able to expand that into a full set of “missing” Git commands I’d always wanted. With the productivity boost from working with Claude Code, these utilities have become even more valuable to me. I hope you find them useful too!
+A while ago, I created a simple `git-undo` bash function to solve one of my recurring pain points. Thanks to Claude Code, I was able to expand that into a full set of “missing” Git commands I’d always wanted. 
+
+With the productivity boost from working with Claude Code, these utilities have become even more valuable to me. I hope you find them useful too!
 
 If you do, feel free to reach out on X at @tmgbabul.
 
