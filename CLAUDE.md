@@ -171,3 +171,42 @@ Functions use POSIX-compliant syntax with specific considerations:
 - **Cleanup**: Always clean up temp files in all code paths (success, failure, cancellation)
 
 **NEVER** create temp files in repository root - always use isolated test directories or system temp.
+
+**Safe Temp File Cleanup**: Some systems have `rm` aliased to `trash` utilities that produce error messages when files don't exist. Always check file existence before cleanup:
+```bash
+# AVOID: May produce "trash: path does not exist" errors
+rm -f "$temp_file"
+
+# PREFER: Only remove if file exists
+[ -f "$temp_file" ] && rm -f "$temp_file"
+```
+
+**When This Matters**: Particularly important in conditional cleanup scenarios where temp files may not have been created due to early returns or failed operations.
+
+## Shell Debug Output Suppression
+
+**Debug Mode Isolation**: When shell debug mode (`set -x`) is active in the environment, variable assignments and function calls produce unwanted debug output. To suppress this for specific operations:
+
+**Subshell Isolation Technique**: Use subshells `()` to completely isolate operations from parent shell's debug mode:
+```bash
+# AVOID: This will show debug output when set -x is active
+_function_with_debug_issues() {
+    local result
+    result=$(some_command)
+    echo "$result"
+}
+
+# PREFER: Subshell isolation completely prevents debug output
+_function_quiet() {
+    local param="$1"
+    (
+        some_command_that_might_be_traced
+    ) 2>/dev/null
+}
+```
+
+**Key Benefits**: 
+- Subshells run in separate process context, inheriting no debug state
+- Complete isolation from parent shell's `set -x` mode  
+- No complex debug enable/disable logic needed
+- Works reliably across all shell environments

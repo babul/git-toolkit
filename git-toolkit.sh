@@ -65,6 +65,15 @@ _git_get_current_branch() {
     git branch --show-current 2>/dev/null || echo "main"
 }
 
+# Utility function to format timestamps without debug output
+_git_format_date_quiet() {
+    local timestamp="$1"
+    # Completely redirect all output from this function to avoid debug traces
+    (
+        date -d "@$timestamp" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -r "$timestamp" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "unknown date"
+    ) 2>/dev/null
+}
+
 _git_confirm_action() {
     local prompt="$1"
     local response
@@ -930,17 +939,14 @@ git_clean_stashes() {
                 local age_days=$((age_seconds / 86400))
                 
                 # Format date for display (use portable date command)
-                local stash_date
-                stash_date=$(date -d "@$stash_timestamp" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -r "$stash_timestamp" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "unknown date")
-                
-                echo "$stash_ref|$age_days|$stash_date|$stash_msg" >> "$temp_file"
+                printf "%s|%s|%s|%s\n" "$stash_ref" "$age_days" "$(_git_format_date_quiet "$stash_timestamp")" "$stash_msg" >> "$temp_file"
             fi
         fi
     done
     
     # Check if any old stashes were found
     if [ ! -f "$temp_file" ] || [ ! -s "$temp_file" ]; then
-        rm -f "$temp_file"
+        [ -f "$temp_file" ] && rm -f "$temp_file"
         echo "✓ No stashes older than $AGE_DAYS days found"
         return 0
     fi
@@ -987,7 +993,7 @@ git_clean_stashes() {
         fi
     done < "$temp_delete_file"
     
-    rm -f "$temp_delete_file"
+    [ -f "$temp_delete_file" ] && rm -f "$temp_delete_file"
     
     # Cleanup temp file
     rm -f "$temp_file"
