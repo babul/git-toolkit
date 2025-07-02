@@ -10,9 +10,15 @@ An opinionated collection of cross-platform Git utilities that provide interacti
 
 The goal of these utilities is to make getting to a clean working state in any branch safe and easy, while still allowing you to be as creative and productive as you need to be.
 
+---
+
 USE AT YOUR OWN RISK! (I use them every day, but of course, YMMV). 
 
-Built with the assistance of Claude Code. `CLAUDE.md` is included.
+While these tools are tested daily, always back up your work and use caution when modifying git history.
+
+---
+
+Built with the assistance of Claude Code. [`CLAUDE.md`](CLAUDE.md) is included.
 
 I am on a Mac Sequoia 15.5 (Silicon) using Warp terminal. I've tried to keep these functions as portable as possible. If you have an issue, run the test script in debug mode and post an Issue on GitHub in this repository.
 
@@ -40,7 +46,7 @@ All you need is the main script, `git-toolkit.sh`. Just add it to your shell and
 
 ## MacOS / zsh
 
-Here is copy/paste instructions for any `zsh` shell. `zsh` has been the default shell on macOS since 2019 Catalina.
+Copy and paste instructions for any `zsh` shell. `zsh` has been the default shell on macOS since 2019 Catalina.
 
 1. Download the script to your user folder
    ```bash
@@ -52,7 +58,7 @@ Here is copy/paste instructions for any `zsh` shell. `zsh` has been the default 
    source ~/git-toolkit.sh
    ```
 
-3. Add the script to your shell configuration file so it loads automatically.
+3. Add the script to your shell configuration file to load it automatically on startup
    ```bash
    echo 'source ~/git-toolkit.sh' >> ~/.zshrc
    ```
@@ -61,7 +67,7 @@ Here is copy/paste instructions for any `zsh` shell. `zsh` has been the default 
 
 ## Ubuntu / bash
 
-Here is copy/paste instructions for any `bash` shell. macOS systems older than Catalina are using `bash`.
+Here is copy/paste instructions for any `bash` shell. macOS versions prior to Catalina use `bash` as the default shell, but you will need Bash 4.0+.
 
 1. Download the script to your user folder
    ```bash
@@ -73,7 +79,7 @@ Here is copy/paste instructions for any `bash` shell. macOS systems older than C
    source ~/git-toolkit.sh
    ```
    
-3. Add the script to your shell configuration file so it loads automatically.
+3. Add the script to your shell configuration file to load it automatically on startup
    ```bash
    echo 'source ~/git-toolkit.sh' >> ~/.bashrc
    ```
