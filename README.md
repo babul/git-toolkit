@@ -1,5 +1,7 @@
 # git-toolkit
 
+[![Test Suite](https://github.com/babul/git-toolkit/actions/workflows/test.yml/badge.svg)](https://github.com/babul/git-toolkit/actions/workflows/test.yml)
+
 An opinionated collection of cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches while preserving your work with a test suite to ensure safety.
 
 The goal with these utilities is to make getting to a clean working state in any branch safe and easy, while still letting you be as creative/productive as you need to be. With these new AI coding tools (like Claude Code), I know I need to work smarter also.
