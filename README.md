@@ -5,6 +5,7 @@
 [![macOS](https://img.shields.io/badge/macOS-tested-brightgreen)](https://github.com/babul/git-toolkit/actions/workflows/test.yml)
 [![bash](https://img.shields.io/badge/bash-compatible-blue)](https://github.com/babul/git-toolkit/actions/workflows/test.yml)
 [![POSIX sh](https://img.shields.io/badge/POSIX%20sh-compatible-blue)](https://github.com/babul/git-toolkit/actions/workflows/test.yml)
+[![zsh](https://img.shields.io/badge/zsh-compatible-blue)](https://github.com/babul/git-toolkit/actions/workflows/test.yml)
 
 An opinionated collection of cross-platform Git utilities that provide interactive ways to undo commits, stash changes, and clean up branches, etc. while preserving your work with a test suite to ensure safety.
 
