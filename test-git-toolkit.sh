@@ -19,24 +19,32 @@ PASS_COUNT=0
 FAIL_COUNT=0
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[1;33m'
+NC=$'\033[0m'
 
 # Function to cleanup all test directories on exit
 #
 cleanup_test_dirs() {
     # shellcheck disable=SC2317
-    echo "Cleaning up test directories..."
+    printf "Cleaning up test directories..."
     # shellcheck disable=SC2317
     cd "$SCRIPT_DIR" 2>/dev/null || true
     # shellcheck disable=SC2317
     if [ -d "$TEST_BASE_DIR" ]; then
-        rm -rf "$TEST_BASE_DIR"/test-*-$$ 2>/dev/null || true
-        # Also clean up any orphaned test directories from previous runs
-        # shellcheck disable=SC2038,SC2086,SC2317
-        find "$TEST_BASE_DIR" -maxdepth 1 -name "test-*-[0-9]*" -type d -exec rm -rf {} + 2>/dev/null || true
+        # Use find to avoid glob expansion issues in different shells
+        if find "$TEST_BASE_DIR" -maxdepth 1 -name "test-*-$$" -type d -exec rm -rf {} + 2>/dev/null && \
+           find "$TEST_BASE_DIR" -maxdepth 1 -name "test-*-[0-9]*" -type d -exec rm -rf {} + 2>/dev/null; then
+            # shellcheck disable=SC2317
+            printf " done!\n"
+        else
+            # shellcheck disable=SC2317
+            printf " error!\n"
+        fi
+    else
+        # shellcheck disable=SC2317
+        printf " done!\n"
     fi
 }
 
