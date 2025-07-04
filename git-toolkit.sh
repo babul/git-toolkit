@@ -145,6 +145,9 @@ _git_parse_args() {
             VERBOSE_MODE=""
             TARGET_BRANCH=""
             ;;
+        git_show_branches)
+            VERBOSE_MODE=""
+            ;;
         git_stash)
             CUSTOM_MESSAGE=""
             ;;
@@ -160,7 +163,7 @@ _git_parse_args() {
                 shift
                 ;;
             -v)
-                if [ "$function_name" = "git_status" ]; then
+                if [ "$function_name" = "git_status" ] || [ "$function_name" = "git_show_branches" ]; then
                     VERBOSE_MODE="oneline"
                     shift
                 else
@@ -170,7 +173,7 @@ _git_parse_args() {
                 fi
                 ;;
             -vv)
-                if [ "$function_name" = "git_status" ]; then
+                if [ "$function_name" = "git_status" ] || [ "$function_name" = "git_show_branches" ]; then
                     VERBOSE_MODE="full"
                     shift
                 else
@@ -258,6 +261,12 @@ _git_show_usage() {
             echo "  -vv      Show full commits since fork"
             echo "  --debug  Show debug information"
             echo "  branch-name  Target branch to check against"
+            ;;
+        git_show_branches)
+            echo "Usage: git_show_branches [-v|-vv] [--debug]"
+            echo "  -v       Show last commit for each branch"
+            echo "  -vv      Show full last commit details for each branch"
+            echo "  --debug  Show debug information"
             ;;
         git_clean_stashes)
             echo "Usage: git_clean_stashes [--debug] [--age=days]"
@@ -1328,6 +1337,165 @@ git_status() {
     fi
 }
 
+git_show_branches() {
+    # Temporarily disable debug output
+    local old_x_setting=""
+    case $- in
+        *x*) 
+            old_x_setting="x"
+            set +x
+            ;;
+    esac
+    
+    # Parse command line arguments using shared utility
+    _git_parse_args "git_show_branches" "$@" || return 1
+    
+    _git_validate_all || return 1
+    
+    # Debug output
+    if [ "$DEBUG_MODE" = "true" ]; then
+        echo "=== DEBUG MODE ==="
+        echo "Listing all local branches with remote tracking status"
+        echo "=================="
+    fi
+    
+    # Get all local branches
+    local branches
+    branches=$(git branch --format='%(refname:short)' 2>/dev/null)
+    
+    if [ -z "$branches" ]; then
+        echo "✓ No local branches found"
+        return 0
+    fi
+    
+    # Use a temporary file to avoid subshell issues with while loop
+    local temp_file
+    temp_file=$(mktemp -t git-show-branches.XXXXXX) || {
+        echo "✗ Error: Could not create temporary file"
+        return 1
+    }
+    echo "$branches" > "$temp_file"
+    
+    # Calculate maximum lengths for column alignment
+    local max_branch_len max_remote_len
+    
+    # Calculate lengths in subshell to suppress all debug output
+    local length_result
+    length_result=$(
+        max_branch_len=0
+        max_remote_len=12  # Minimum for "(local only)"
+        
+        while read -r branch; do
+            if [ -n "$branch" ]; then
+                # Check branch name length
+                branch_len=${#branch}
+                if [ "$branch_len" -gt "$max_branch_len" ]; then
+                    max_branch_len=$branch_len
+                fi
+                
+                # Check remote ref length
+                remote_ref=$(git config "branch.$branch.remote" 2>/dev/null)
+                remote_branch=$(git config "branch.$branch.merge" 2>/dev/null | sed 's|refs/heads/||')
+                
+                if [ -n "$remote_ref" ] && [ -n "$remote_branch" ]; then
+                    full_remote="${remote_ref}/${remote_branch}"
+                    remote_len=${#full_remote}
+                    if [ "$remote_len" -gt "$max_remote_len" ]; then
+                        max_remote_len=$remote_len
+                    fi
+                fi
+            fi
+        done < "$temp_file"
+        echo "$max_branch_len $max_remote_len"
+    ) 2>/dev/null
+    
+    # Parse the results
+    max_branch_len=$(echo "$length_result" | cut -d' ' -f1)
+    max_remote_len=$(echo "$length_result" | cut -d' ' -f2)
+    
+    # Add 2 characters padding to each column
+    max_branch_len=$((max_branch_len + 2))
+    max_remote_len=$((max_remote_len + 2))
+    
+    # Debug output
+    if [ "$DEBUG_MODE" = "true" ]; then
+        echo "Calculated max_branch_len: $max_branch_len"
+        echo "Calculated max_remote_len: $max_remote_len"
+    fi
+    
+    # Process each branch
+    while read -r branch; do
+        if [ -n "$branch" ]; then
+            # Use subshell to isolate from debug mode
+            (
+                # Pass in the column widths
+                local max_branch_len="$max_branch_len"
+                local max_remote_len="$max_remote_len"
+                
+                # Get remote tracking info
+                local remote_ref remote_branch
+                remote_ref=$(git config "branch.$branch.remote" 2>/dev/null)
+                remote_branch=$(git config "branch.$branch.merge" 2>/dev/null | sed 's|refs/heads/||')
+                
+                # Format branch name with padding
+                local branch_display
+                local fmt_str="%-${max_branch_len}s"
+                branch_display=$(printf "$fmt_str" "$branch")
+                
+                if [ -n "$remote_ref" ] && [ -n "$remote_branch" ]; then
+                    # Has remote tracking
+                    local full_remote_ref="$remote_ref/$remote_branch"
+                    local remote_display
+                    local fmt_str2="%-${max_remote_len}s"
+                    remote_display=$(printf "$fmt_str2" "$full_remote_ref")
+                    
+                    # Check if remote branch exists
+                    if git rev-parse --verify "$full_remote_ref" >/dev/null 2>&1; then
+                        # Get ahead/behind status
+                        local ahead behind
+                        ahead=$(git rev-list --count "$full_remote_ref..$branch" 2>/dev/null || echo "0")
+                        behind=$(git rev-list --count "$branch..$full_remote_ref" 2>/dev/null || echo "0")
+                        
+                        if [ "$ahead" -gt 0 ] && [ "$behind" -gt 0 ]; then
+                            printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[31m%s ahead, %s behind\033[0m\n" "$branch_display" "$remote_display" "$ahead" "$behind"
+                        elif [ "$ahead" -gt 0 ]; then
+                            printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[33m%s ahead\033[0m\n" "$branch_display" "$remote_display" "$ahead"
+                        elif [ "$behind" -gt 0 ]; then
+                            printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[31m%s behind\033[0m\n" "$branch_display" "$remote_display" "$behind"
+                        else
+                            printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[32mup to date\033[0m\n" "$branch_display" "$remote_display"
+                        fi
+                    else
+                        printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[31mremote branch gone\033[0m\n" "$branch_display" "$remote_display"
+                    fi
+                else
+                    # No remote tracking
+                    local commit_count
+                    commit_count=$(git rev-list --count "$branch" 2>/dev/null || echo "0")
+                    local local_only_display
+                    local_only_display=$(printf "%-${max_remote_len}s" "(local only)")
+                    printf "\033[33m%s\033[0m  \033[90m%s\033[0m  Status: \033[90m%s local commit(s)\033[0m\n" "$branch_display" "$local_only_display" "$commit_count"
+                fi
+                
+                # Show last commit info if verbose
+                if [ -n "$VERBOSE_MODE" ]; then
+                    local last_commit
+                    last_commit=$(git log -1 --format="%h %s" "$branch" 2>/dev/null || echo "No commits")
+                    local indent_len=$((max_branch_len + 2 + max_remote_len + 2))
+                    printf "%${indent_len}s└─ %s\n" "" "$last_commit"
+                fi
+            ) 2>/dev/null
+        fi
+    done < "$temp_file"
+    
+    [ -f "$temp_file" ] && rm -f "$temp_file"
+    
+    # Restore debug setting if it was enabled
+    if [ "$old_x_setting" = "x" ]; then
+        set -x
+    fi
+}
+
 # Backward compatibility aliases (for shells that support hyphenated function names)
 # These will only work in bash and similar shells, not in strict POSIX sh
 # Create aliases only if we can safely evaluate them
@@ -1341,6 +1509,7 @@ if [ -n "$BASH_VERSION" ] || [ -n "$ZSH_VERSION" ]; then
         alias git-redo='git_redo'
         alias git-squash='git_squash'
         alias git-status='git_status'
+        alias git-show-branches='git_show_branches'
     }
     
     # Only run if we're in an interactive shell or aliases are enabled

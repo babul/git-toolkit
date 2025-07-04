@@ -1978,10 +1978,180 @@ cleanup_test_repo "$TEST_DIR"
 
 echo
 echo "=========================================="
+echo "TESTING: git_show_branches function"
+echo "=========================================="
+
+# Test 54: git_show_branches - Not in git repository
+printf "${YELLOW}[TEST]${NC} git_show_branches: Not in git repository\n"
+# Create test directory in system temp to ensure it's outside any git repo
+TEST_DIR="$(mktemp -d -t git-toolkit-test-show-branches-nogit-XXXXXX)"
+cd "$TEST_DIR" || exit 1
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+if ! output=$(git_show_branches $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
+    printf "${GREEN}[PASS]${NC} git_show_branches correctly detected not in git repository\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_branches should have detected not in git repository. Output: $output\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 55: git_show_branches - Repository with no commits
+printf "${YELLOW}[TEST]${NC} git_show_branches: Repository with no commits\n"
+TEST_DIR="$TEST_BASE_DIR/test-show-branches-nocommits-$$"
+mkdir -p "$TEST_DIR"
+cd "$TEST_DIR" || exit 1
+git init > /dev/null 2>&1
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+if ! output=$(git_show_branches $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
+    printf "${GREEN}[PASS]${NC} git_show_branches correctly detected repository with no commits\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_branches should have detected repository with no commits. Output: $output\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 56: git_show_branches - Single branch (local only)
+printf "${YELLOW}[TEST]${NC} git_show_branches: Single branch (local only)\n"
+TEST_DIR="$TEST_BASE_DIR/test-show-branches-single-$$"
+mkdir -p "$TEST_DIR"
+cd "$TEST_DIR" || exit 1
+git init > /dev/null 2>&1
+git config user.name "Test User"
+git config user.email "test@example.com"
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+DEFAULT_BRANCH=$(get_default_branch)
+echo "test file" > test.txt
+git add test.txt
+git commit -m "Initial commit" > /dev/null 2>&1
+
+if output=$(git_show_branches $DEBUG_MODE 2>&1); then
+    # Strip ANSI color codes for comparison
+    clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
+    if echo "$clean_output" | grep -q "(local only)" && \
+       echo "$clean_output" | grep -q "local commit(s)"; then
+        printf "${GREEN}[PASS]${NC} git_show_branches correctly showed single local branch\n"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    else
+        printf "${RED}[FAIL]${NC} git_show_branches should have shown single local branch. Output: $output\n"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+else
+    printf "${RED}[FAIL]${NC} git_show_branches failed to execute. Output: $output\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 57: git_show_branches - Multiple branches with different statuses
+printf "${YELLOW}[TEST]${NC} git_show_branches: Multiple branches with different statuses\n"
+TEST_DIR="$TEST_BASE_DIR/test-show-branches-multiple-$$"
+mkdir -p "$TEST_DIR"
+cd "$TEST_DIR" || exit 1
+git init > /dev/null 2>&1
+git config user.name "Test User"
+git config user.email "test@example.com"
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+DEFAULT_BRANCH=$(get_default_branch)
+# Create initial commit
+echo "test file" > test.txt
+git add test.txt
+git commit -m "Initial commit" > /dev/null 2>&1
+
+# Create feature branch
+git checkout -b feature-branch > /dev/null 2>&1
+echo "feature content" > feature.txt
+git add feature.txt
+git commit -m "Feature commit" > /dev/null 2>&1
+
+# Create another branch
+git checkout -b another-branch > /dev/null 2>&1
+echo "another content" > another.txt
+git add another.txt
+git commit -m "Another commit" > /dev/null 2>&1
+
+# Go back to default branch
+git checkout "$DEFAULT_BRANCH" > /dev/null 2>&1
+
+output=$(git_show_branches $DEBUG_MODE 2>&1)
+if echo "$output" | grep -q "feature-branch" && \
+   echo "$output" | grep -q "another-branch" && \
+   echo "$output" | grep -q "$DEFAULT_BRANCH"; then
+    printf "${GREEN}[PASS]${NC} git_show_branches correctly showed multiple branches\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_branches should have shown multiple branches. Output: $output\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 58: git_show_branches - Verbose mode
+printf "${YELLOW}[TEST]${NC} git_show_branches: Verbose mode\n"
+TEST_DIR="$TEST_BASE_DIR/test-show-branches-verbose-$$"
+mkdir -p "$TEST_DIR"
+cd "$TEST_DIR" || exit 1
+git init > /dev/null 2>&1
+git config user.name "Test User"
+git config user.email "test@example.com"
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+DEFAULT_BRANCH=$(get_default_branch)
+echo "test file" > test.txt
+git add test.txt
+git commit -m "Initial commit" > /dev/null 2>&1
+
+git checkout -b feature-branch > /dev/null 2>&1
+echo "feature content" > feature.txt
+git add feature.txt
+git commit -m "Feature commit" > /dev/null 2>&1
+
+output=$(git_show_branches $DEBUG_MODE -v 2>&1)
+# Strip ANSI color codes for comparison
+clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
+if echo "$clean_output" | grep -q "└─" && \
+   echo "$clean_output" | grep -q "Feature commit"; then
+    printf "${GREEN}[PASS]${NC} git_show_branches -v correctly showed commit information\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_branches -v should have shown commit information. Output: $output\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 59: git_show_branches - Invalid option
+printf "${YELLOW}[TEST]${NC} git_show_branches: Invalid option\n"
+TEST_DIR="$TEST_BASE_DIR/test-show-branches-invalid-$$"
+mkdir -p "$TEST_DIR"
+cd "$TEST_DIR" || exit 1
+git init > /dev/null 2>&1
+git config user.name "Test User"
+git config user.email "test@example.com"
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+echo "test file" > test.txt
+git add test.txt
+git commit -m "Initial commit" > /dev/null 2>&1
+
+if ! output=$(git_show_branches $DEBUG_MODE -x 2>&1) && echo "$output" | grep -q "Error: Unknown option '-x'" && \
+   echo "$output" | grep -q "Usage: git_show_branches"; then
+    printf "${GREEN}[PASS]${NC} git_show_branches correctly handled invalid option\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_branches should have detected invalid option. Output: $output\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+echo
+echo "=========================================="
 echo "TESTING: git_clean_stashes function"
 echo "=========================================="
 
-# Test 54: git_clean_stashes - Not in git repository
+# Test 60: git_clean_stashes - Not in git repository
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: Not in git repository\n"
 # Create test directory in system temp to ensure it's outside any git repo
 TEST_DIR="$(mktemp -d -t git-toolkit-test-clean-stashes-nogit-XXXXXX)"
@@ -1998,7 +2168,7 @@ fi
 cd "$SCRIPT_DIR"
 rm -rf "$TEST_DIR"
 
-# Test 55: git_clean_stashes - Repository with no commits
+# Test 61: git_clean_stashes - Repository with no commits
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: Repository with no commits\n"
 TEST_DIR=$(setup_test_repo "clean-stashes-no-commits")
 cd "$TEST_DIR" || exit 1
@@ -2018,7 +2188,7 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 56: git_clean_stashes - No stashes available
+# Test 62: git_clean_stashes - No stashes available
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: No stashes available\n"
 TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-no-stashes")
 cd "$TEST_DIR" || exit 1
@@ -2038,7 +2208,7 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 57: git_clean_stashes - Invalid age parameter
+# Test 63: git_clean_stashes - Invalid age parameter
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: Invalid age parameter\n"
 TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-invalid-age")
 cd "$TEST_DIR" || exit 1
@@ -2058,7 +2228,7 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 58: git_clean_stashes - Cancel cleanup operation
+# Test 64: git_clean_stashes - Cancel cleanup operation
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: Cancel cleanup operation\n"
 TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-cancel")
 cd "$TEST_DIR" || exit 1
@@ -2086,7 +2256,7 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 59: git_clean_stashes - No old stashes (all recent)
+# Test 65: git_clean_stashes - No old stashes (all recent)
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: No old stashes (all recent)\n"
 TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-no-old")
 cd "$TEST_DIR" || exit 1
@@ -2111,7 +2281,7 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 60: git_clean_stashes - Successfully clean old stashes
+# Test 66: git_clean_stashes - Successfully clean old stashes
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: Successfully clean old stashes\n"
 TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-success")
 cd "$TEST_DIR" || exit 1
@@ -2145,7 +2315,7 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
-# Test 61: git_clean_stashes - Debug mode output
+# Test 67: git_clean_stashes - Debug mode output
 printf "${YELLOW}[TEST]${NC} git_clean_stashes: Debug mode output\n"
 TEST_DIR=$(setup_test_repo_with_commit "clean-stashes-debug")
 cd "$TEST_DIR" || exit 1
