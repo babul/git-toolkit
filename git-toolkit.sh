@@ -23,6 +23,22 @@ if [ -z "$DATE_FORMAT" ] || [ "$DATE_FORMAT" = "" ]; then
     readonly DATE_FORMAT='%Y-%m-%d %H:%M:%S'
 fi
 
+# Time constants for better readability
+if [ -z "$SECONDS_PER_DAY" ] || [ "$SECONDS_PER_DAY" = "" ]; then
+    readonly SECONDS_PER_DAY=86400  # 24 * 60 * 60
+fi
+
+# Default stash age thresholds
+if [ -z "$DEFAULT_STASH_AGE_DAYS" ] || [ "$DEFAULT_STASH_AGE_DAYS" = "" ]; then
+    readonly DEFAULT_STASH_AGE_DAYS=60  # Default for git-clean-stashes
+fi
+if [ -z "$DEFAULT_STASH_OLD_THRESHOLD" ] || [ "$DEFAULT_STASH_OLD_THRESHOLD" = "" ]; then
+    readonly DEFAULT_STASH_OLD_THRESHOLD=60  # Red color threshold
+fi
+if [ -z "$DEFAULT_STASH_MEDIUM_THRESHOLD" ] || [ "$DEFAULT_STASH_MEDIUM_THRESHOLD" = "" ]; then
+    readonly DEFAULT_STASH_MEDIUM_THRESHOLD=30  # Yellow color threshold
+fi
+
 # Shared utility functions
 _git_get_protected_pattern() {
     if [ -n "$PROTECTED_BRANCHES_PATTERN_OVERRIDE" ]; then
@@ -52,12 +68,24 @@ _git_validate_commits() {
 }
 
 _git_check_clean_working_dir() {
-    if ! git diff-index --quiet HEAD 2>/dev/null || \
-       ! git diff-index --quiet --cached HEAD 2>/dev/null || \
-       test -n "$(git ls-files --others --exclude-standard 2>/dev/null)"; then
+    # Check for unstaged changes
+    if ! git diff-index --quiet HEAD 2>/dev/null; then
         echo "✗ Error: Working directory is not clean. Please commit or stash your changes first."
         return 1
     fi
+    
+    # Check for staged changes
+    if ! git diff-index --quiet --cached HEAD 2>/dev/null; then
+        echo "✗ Error: Working directory is not clean. Please commit or stash your changes first."
+        return 1
+    fi
+    
+    # Check for untracked files
+    if test -n "$(git ls-files --others --exclude-standard 2>/dev/null)"; then
+        echo "✗ Error: Working directory is not clean. Please commit or stash your changes first."
+        return 1
+    fi
+    
     return 0
 }
 
@@ -88,6 +116,28 @@ _git_confirm_action() {
 _git_format_timestamp() {
     local format="${DATE_FORMAT:-'%Y-%m-%d %H:%M:%S'}"
     date "+$format" 2>/dev/null
+}
+
+# Generic column width calculator
+# Usage: _git_calculate_max_length "field_value" current_max
+_git_calculate_max_length() {
+    local value="$1"
+    local current_max="$2"
+    local value_len=${#value}
+    
+    if [ "$value_len" -gt "$current_max" ]; then
+        echo "$value_len"
+    else
+        echo "$current_max"
+    fi
+}
+
+# Format string with left-padding for column alignment
+# Usage: _git_format_column "text" width
+_git_format_column() {
+    local text="$1"
+    local width="$2"
+    printf "%-${width}s" "$text"
 }
 
 # Display file status information with color coding
@@ -155,7 +205,7 @@ _git_parse_args() {
             CUSTOM_MESSAGE=""
             ;;
         git_clean_stashes)
-            AGE_DAYS="60"  # default value
+            AGE_DAYS="$DEFAULT_STASH_AGE_DAYS"  # default value
             ;;
     esac
     
@@ -286,7 +336,7 @@ _git_show_usage() {
         git_clean_stashes)
             echo "Usage: git_clean_stashes [--debug] [--age=days]"
             echo "  --debug    Show debug information"
-            echo "  --age=N    Clean stashes older than N days (default: 60)"
+            echo "  --age=N    Clean stashes older than N days (default: $DEFAULT_STASH_AGE_DAYS)"
             ;;
     esac
 }
@@ -934,12 +984,26 @@ git_squash() {
     local EDITOR_CMD
     EDITOR_CMD="${EDITOR:-${VISUAL:-vi}}"
     
-    # Validate editor command to prevent command injection
+    # Validate editor command with whitelist approach for better security
+    # Only allow alphanumeric characters, hyphens, underscores, dots, and forward slashes
     case "$EDITOR_CMD" in
-        *\;*|*\&*|*\|*|*\$*|*\`*|*\(*|*\)*|*\{*|*\}*)
-            echo "✗ Error: Editor command contains unsafe characters"
-            [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
-            return 1
+        */*)
+            # Allow paths like /usr/bin/vim or ./editor
+            if ! echo "$EDITOR_CMD" | grep -q '^[a-zA-Z0-9/_.-]*$'; then
+                echo "✗ Error: Editor path contains unsafe characters"
+                echo "  Only alphanumeric, /, -, _, and . characters are allowed"
+                [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
+                return 1
+            fi
+            ;;
+        *)
+            # For simple commands, only allow alphanumeric and basic characters
+            if ! echo "$EDITOR_CMD" | grep -q '^[a-zA-Z0-9_-]*$'; then
+                echo "✗ Error: Editor command contains unsafe characters"
+                echo "  Only alphanumeric, -, and _ characters are allowed"
+                [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
+                return 1
+            fi
             ;;
     esac
     
@@ -1008,7 +1072,7 @@ git_clean_stashes() {
     
     # Calculate cutoff timestamp (AGE_DAYS ago)
     local CUTOFF_TIMESTAMP
-    CUTOFF_TIMESTAMP=$((CURRENT_TIMESTAMP - AGE_DAYS * 24 * 3600))
+    CUTOFF_TIMESTAMP=$((CURRENT_TIMESTAMP - AGE_DAYS * SECONDS_PER_DAY))
     
     # Debug output
     if [ "$DEBUG_MODE" = "true" ]; then
@@ -1037,7 +1101,7 @@ git_clean_stashes() {
             if [ "$stash_timestamp" -lt "$CUTOFF_TIMESTAMP" ]; then
                 # Calculate age in days for display
                 local age_seconds=$((CURRENT_TIMESTAMP - stash_timestamp))
-                local age_days=$((age_seconds / 86400))
+                local age_days=$((age_seconds / SECONDS_PER_DAY))
                 
                 # Format date for display (use portable date command)
                 printf "%s|%s|%s|%s\n" "$stash_ref" "$age_days" "$(_git_format_date_quiet "$stash_timestamp")" "$stash_msg" >> "$temp_file"
@@ -1102,7 +1166,7 @@ git_clean_stashes() {
     [ -f "$temp_delete_file" ] && rm -f "$temp_delete_file"
     
     # Cleanup temp file
-    rm -f "$temp_file"
+    [ -f "$temp_file" ] && rm -f "$temp_file"
     
     echo
     if [ "$failed_count" -eq 0 ]; then
@@ -1245,7 +1309,12 @@ git_status() {
     local BASE_COMMIT=""
     
     # Get list of all branches except the target branch
-    BASE_CANDIDATES=$(git branch -a | sed 's/^\*//' | sed 's/^[[:space:]]*//' | grep -v "^$TARGET_BRANCH$" | grep -vE "HEAD|remotes/origin/HEAD" | head -20)
+    BASE_CANDIDATES=$(git branch -a | \
+        sed 's/^\*//' | \
+        sed 's/^[[:space:]]*//' | \
+        grep -v "^$TARGET_BRANCH$" | \
+        grep -vE "HEAD|remotes/origin/HEAD" | \
+        head -20)
     
     # Try to find the most likely base branch
     local BEST_BASE=""
@@ -1258,7 +1327,7 @@ git_status() {
     # Check common base branches first - prioritize develop over main for feature branches
     for candidate in develop main master origin/develop origin/main origin/master; do
         # Quick check if branch exists using pre-validated list
-        if echo "$existing_branches" | grep -q "^$candidate$"; then
+        if echo "$existing_branches" | grep -q "^${candidate}$"; then
             merge_base=$(git merge-base "$TARGET_BRANCH" "$candidate" 2>/dev/null)
             if [ -n "$merge_base" ]; then
                 # Calculate distance from merge base to target branch  
@@ -1290,16 +1359,19 @@ git_status() {
         echo "$BASE_CANDIDATES" > "$temp_file"
         
         while read -r candidate; do
-            if [ -n "$candidate" ] && git rev-parse --verify "$candidate" >/dev/null 2>&1; then
-                merge_base=$(git merge-base "$TARGET_BRANCH" "$candidate" 2>/dev/null)
-                if [ -n "$merge_base" ]; then
-                    distance=$(git rev-list --count "$merge_base..$TARGET_BRANCH" 2>/dev/null)
-                    distance=${distance:-999999}
-                    
-                    if [ "$distance" -gt 0 ] && [ "$distance" -lt "$BEST_DISTANCE" ]; then
-                        BEST_BASE="$candidate"
-                        BEST_DISTANCE="$distance"
-                        MERGE_BASE="$merge_base"
+            if [ -n "$candidate" ]; then
+                # Check if candidate exists in pre-validated list first
+                if echo "$existing_branches" | grep -q "^${candidate}$"; then
+                    merge_base=$(git merge-base "$TARGET_BRANCH" "$candidate" 2>/dev/null)
+                    if [ -n "$merge_base" ]; then
+                        distance=$(git rev-list --count "$merge_base..$TARGET_BRANCH" 2>/dev/null)
+                        distance=${distance:-999999}
+                        
+                        if [ "$distance" -gt 0 ] && [ "$distance" -lt "$BEST_DISTANCE" ]; then
+                            BEST_BASE="$candidate"
+                            BEST_DISTANCE="$distance"
+                            MERGE_BASE="$merge_base"
+                        fi
                     fi
                 fi
             fi
@@ -1394,10 +1466,7 @@ git_show_branches() {
         while read -r branch; do
             if [ -n "$branch" ]; then
                 # Check branch name length
-                branch_len=${#branch}
-                if [ "$branch_len" -gt "$max_branch_len" ]; then
-                    max_branch_len=$branch_len
-                fi
+                max_branch_len=$(_git_calculate_max_length "$branch" "$max_branch_len")
                 
                 # Check remote ref length
                 remote_ref=$(git config "branch.$branch.remote" 2>/dev/null || true)
@@ -1405,10 +1474,7 @@ git_show_branches() {
                 
                 if [ -n "$remote_ref" ] && [ -n "$remote_branch" ]; then
                     full_remote="${remote_ref}/${remote_branch}"
-                    remote_len=${#full_remote}
-                    if [ "$remote_len" -gt "$max_remote_len" ]; then
-                        max_remote_len=$remote_len
-                    fi
+                    max_remote_len=$(_git_calculate_max_length "$full_remote" "$max_remote_len")
                 fi
             fi
         done < "$temp_file"
@@ -1439,15 +1505,13 @@ git_show_branches() {
             
             # Format branch name with padding
             local branch_display
-            local fmt_str="%-${max_branch_len}s"
-            branch_display=$(printf "$fmt_str" "$branch")
+            branch_display=$(_git_format_column "$branch" "$max_branch_len")
             
             if [ -n "$remote_ref" ] && [ -n "$remote_branch" ]; then
                 # Has remote tracking
                 local full_remote_ref="$remote_ref/$remote_branch"
                 local remote_display
-                local fmt_str2="%-${max_remote_len}s"
-                remote_display=$(printf "$fmt_str2" "$full_remote_ref")
+                remote_display=$(_git_format_column "$full_remote_ref" "$max_remote_len")
                 
                 # Check if remote branch exists
                 if git rev-parse --verify "$full_remote_ref" >/dev/null 2>&1; then
@@ -1473,7 +1537,7 @@ git_show_branches() {
                 local commit_count
                 commit_count=$(git rev-list --count "$branch" 2>/dev/null || echo "0")
                 local local_only_display
-                local_only_display=$(printf "%-${max_remote_len}s" "(local only)")
+                local_only_display=$(_git_format_column "(local only)" "$max_remote_len")
                 printf "\033[33m%s\033[0m  \033[90m%s\033[0m  Status: \033[90m%s local commit(s)\033[0m\n" "$branch_display" "$local_only_display" "$commit_count"
             fi
             
@@ -1541,11 +1605,14 @@ git_show_stashes() {
         if [ -n "$stash_ref" ] && [ -n "$stash_timestamp" ]; then
             # Calculate age in days
             local age_seconds=$((CURRENT_TIMESTAMP - stash_timestamp))
-            local age_days=$((age_seconds / 86400))
+            local age_days=$((age_seconds / SECONDS_PER_DAY))
             
             # Format date for display
             local formatted_date
             formatted_date=$(_git_format_date_quiet "$stash_timestamp")
+            if [ -z "$formatted_date" ]; then
+                formatted_date="Unknown date"
+            fi
             
             # Write to temp file: date|name|age|ref
             printf "%s|%s|%s|%s\n" "$formatted_date" "$stash_msg" "$age_days" "$stash_ref" >> "$temp_file"
@@ -1569,17 +1636,11 @@ git_show_stashes() {
     length_result=$(
         while IFS='|' read -r formatted_date stash_msg age_days stash_ref; do
             # Check name length
-            name_len=${#stash_msg}
-            if [ "$name_len" -gt "$max_name_len" ]; then
-                max_name_len=$name_len
-            fi
+            max_name_len=$(_git_calculate_max_length "$stash_msg" "$max_name_len")
             
             # Check age display length
             age_display="$age_days days old"
-            age_len=${#age_display}
-            if [ "$age_len" -gt "$max_age_len" ]; then
-                max_age_len=$age_len
-            fi
+            max_age_len=$(_git_calculate_max_length "$age_display" "$max_age_len")
         done < "$temp_file"
         echo "$max_name_len $max_age_len"
     ) 2>/dev/null
@@ -1601,23 +1662,19 @@ git_show_stashes() {
         if [ -n "$stash_ref" ]; then
             # Format columns with proper padding
             local date_display name_display age_display
-            local fmt_date="%-${max_date_len}s"
-            local fmt_name="%-${max_name_len}s"
-            local fmt_age="%-${max_age_len}s"
-            
-            date_display=$(printf "$fmt_date" "$formatted_date")
-            name_display=$(printf "$fmt_name" "$stash_msg")
-            age_display=$(printf "$fmt_age" "$age_days days old")
+            date_display=$(_git_format_column "$formatted_date" "$max_date_len")
+            name_display=$(_git_format_column "$stash_msg" "$max_name_len")
+            age_display=$(_git_format_column "$age_days days old" "$max_age_len")
             
             # Color code based on age
-            if [ "$age_days" -gt 60 ]; then
-                # Old stashes (>60 days) in red
+            if [ "$age_days" -gt "$DEFAULT_STASH_OLD_THRESHOLD" ]; then
+                # Old stashes (>$DEFAULT_STASH_OLD_THRESHOLD days) in red
                 printf "\033[90m%s\033[0m  \033[33m%s\033[0m  \033[31m%s\033[0m\n" "$date_display" "$name_display" "$age_display"
-            elif [ "$age_days" -gt 30 ]; then
-                # Medium age (30-60 days) in yellow
+            elif [ "$age_days" -gt "$DEFAULT_STASH_MEDIUM_THRESHOLD" ]; then
+                # Medium age ($DEFAULT_STASH_MEDIUM_THRESHOLD-$DEFAULT_STASH_OLD_THRESHOLD days) in yellow
                 printf "\033[90m%s\033[0m  \033[33m%s\033[0m  \033[33m%s\033[0m\n" "$date_display" "$name_display" "$age_display"
             else
-                # Recent stashes (<30 days) in green
+                # Recent stashes (<$DEFAULT_STASH_MEDIUM_THRESHOLD days) in green
                 printf "\033[90m%s\033[0m  \033[33m%s\033[0m  \033[32m%s\033[0m\n" "$date_display" "$name_display" "$age_display"
             fi
             

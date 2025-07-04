@@ -632,13 +632,27 @@ Run tests in debug mode for troubleshooting:
 ```
 
 **Test coverage includes:**
-- All eight functions (`git-undo`, `git-redo`, `git-stash`, `git-clean-branches`, `git-squash`, `git-status`, `git-show-branches`, `git-clean-stashes`)
+- All nine functions (`git-undo`, `git-redo`, `git-stash`, `git-clean-branches`, `git-squash`, `git-status`, `git-show-branches`, `git-show-stashes`, `git-clean-stashes`)
 - Error conditions and edge cases
 - User interaction scenarios (confirmation, cancellation)
 - Cross-platform compatibility validation
-- **80 total tests** with colored pass/fail output
+- Special character handling in stash messages
+- Verbose mode operations (-v, -vv)
+- **89 total tests** with colored pass/fail output
 
-### Test Output Example
+**Test breakdown by category:**
+- Cross-platform compatibility: 11 assertions
+- git_undo function: 11 assertions
+- git_stash function: 10 assertions  
+- git_clean_branches function: 10 assertions
+- git_redo function: 9 assertions
+- git_squash function: 8 assertions
+- git_status function: 14 assertions
+- git_show_branches function: 6 assertions
+- git_clean_stashes function: 8 assertions
+- git_show_stashes function: 9 assertions
+
+### Test Output
 
 ```
 [TEST] Starting git-toolkit.sh test suite...
@@ -654,9 +668,9 @@ Test prompt (y/N):
 [TEST] _git_format_timestamp: Edge case testing
 Testing normal timestamp generation...
 Testing fallback when DATE_FORMAT would be empty...
-Fallback logic works: ''2025-07-03 22:14:46''
+Fallback logic works: ''2025-07-03 23:20:49''
 Testing actual function consistency...
-Function consistency works: '2025-07-03 22:14:46'
+Function consistency works: '2025-07-03 23:20:49'
 Testing timestamp consistency...
 [PASS] _git_format_timestamp works correctly in all edge cases (4/4)
 [TEST] Cross-platform: Shell syntax compatibility
@@ -678,7 +692,7 @@ TESTING: git_undo function
 [PASS] Stash was created with correct message
 [PASS] Metadata was stored in stash with correct content
 [TEST] git_undo: Special characters in commit
-stash@{0}: On main: undo main - 2025-07-01 01:12:32 - [sc-123] fix: handle special chars (test) & more [brackets]
+stash@{0}: On main: undo main [sc-123] fix: handle special chars (test) & more [brackets]
 [PASS] Handled special characters in commit message
 [TEST] git_undo: Multiple undos in sequence
 [PASS] Multiple undos work correctly
@@ -841,15 +855,44 @@ Saved working directory and index state On main: test stash to clean
 Saved working directory and index state On main: debug test stash
 [PASS] git_clean_stashes debug mode works correctly
 
+==========================================
+TESTING: git_show_stashes function
+==========================================
+[TEST] git_show_stashes: Not in git repository
+[PASS] git_show_stashes correctly detected not in git repository
+[TEST] git_show_stashes: Repository with no commits
+[PASS] git_show_stashes correctly detected repository with no commits
+[TEST] git_show_stashes: Empty stash list
+[PASS] git_show_stashes correctly handles empty stash list
+[TEST] git_show_stashes: Basic stash display
+Saved working directory and index state On main: First stash
+Saved working directory and index state On main: Second stash
+[PASS] git_show_stashes displays basic stash list correctly
+[TEST] git_show_stashes: Verbose mode (-v)
+Saved working directory and index state On main: Test stash with multiple files
+[PASS] git_show_stashes -v shows file count
+[TEST] git_show_stashes: Full verbose mode (-vv)
+Saved working directory and index state On main: Test stash for full verbose
+[PASS] git_show_stashes -vv shows full diff stats
+[TEST] git_show_stashes: Invalid options
+[PASS] git_show_stashes correctly rejects invalid options
+[TEST] git_show_stashes: Stashes with special characters
+Saved working directory and index state On main: [special] chars & (test) #1
+Saved working directory and index state On main: Test with 'quotes' and "double quotes"
+[PASS] git_show_stashes handles special characters correctly
+[TEST] git_show_stashes: Debug mode
+Saved working directory and index state On main: Debug test stash
+[PASS] git_show_stashes debug mode works correctly
+
 ===============================================
-Test Results: 80 passed, 0 failed
+Test Results: 89 passed, 0 failed
 ===============================================
 All tests passed!
 ```
 
 ### Test Coverage Breakdown
 
-The test suite provides comprehensive coverage across **80 tests** organized into **9 categories**:
+The test suite provides comprehensive coverage across **89 tests** organized into **9 categories**:
 
 | **Category** | **Tests** | **Coverage** |
 |---|---|---|

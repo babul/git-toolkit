@@ -2342,6 +2342,189 @@ else
 fi
 cleanup_test_repo "$TEST_DIR"
 
+echo
+echo "=========================================="
+echo "TESTING: git_show_stashes function"
+echo "=========================================="
+
+# Test 68: git_show_stashes - Not in git repository
+printf "${YELLOW}[TEST]${NC} git_show_stashes: Not in git repository\n"
+# Create test directory in system temp to ensure it's outside any git repo
+TEST_DIR="$(mktemp -d -t git-toolkit-test-show-stashes-nogit-XXXXXX)"
+cd "$TEST_DIR" || exit 1
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+if ! output=$(git_show_stashes $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Not a git repository"; then
+    printf "${GREEN}[PASS]${NC} git_show_stashes correctly detected not in git repository\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_stashes should have detected not in git repository. Output: $output\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+rm -rf "$TEST_DIR"
+
+# Test 69: git_show_stashes - Repository with no commits
+printf "${YELLOW}[TEST]${NC} git_show_stashes: Repository with no commits\n"
+TEST_DIR=$(setup_test_repo "show-stashes-no-commits")
+cd "$TEST_DIR" || exit 1
+
+if ! output=$(git_show_stashes $DEBUG_MODE 2>&1) && echo "$output" | grep -q "Error: Repository has no commits"; then
+    printf "${GREEN}[PASS]${NC} git_show_stashes correctly detected repository with no commits\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_stashes should have detected repository with no commits. Output: $output\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 70: git_show_stashes - Empty stash list
+printf "${YELLOW}[TEST]${NC} git_show_stashes: Empty stash list\n"
+TEST_DIR=$(setup_test_repo_with_commit "show-stashes-empty")
+cd "$TEST_DIR" || exit 1
+
+OUTPUT=$(git_show_stashes $DEBUG_MODE 2>&1)
+if echo "$OUTPUT" | grep -q "No stashes found"; then
+    printf "${GREEN}[PASS]${NC} git_show_stashes correctly handles empty stash list\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_stashes should show 'No stashes found'. Output: $OUTPUT\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 71: git_show_stashes - Basic stash display
+printf "${YELLOW}[TEST]${NC} git_show_stashes: Basic stash display\n"
+TEST_DIR=$(setup_test_repo_with_commit "show-stashes-basic")
+cd "$TEST_DIR" || exit 1
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Create multiple stashes with different ages
+echo "stash1" > stash1.txt
+git add stash1.txt
+git stash push -m "First stash"
+
+echo "stash2" > stash2.txt
+git add stash2.txt
+git stash push -m "Second stash"
+
+OUTPUT=$(git_show_stashes $DEBUG_MODE 2>&1)
+if echo "$OUTPUT" | grep -q "First stash" && \
+   echo "$OUTPUT" | grep -q "Second stash" && \
+   echo "$OUTPUT" | grep -q "days old"; then
+    printf "${GREEN}[PASS]${NC} git_show_stashes displays basic stash list correctly\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_stashes should display stashes with age. Output: $OUTPUT\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 72: git_show_stashes - Verbose mode (-v)
+printf "${YELLOW}[TEST]${NC} git_show_stashes: Verbose mode (-v)\n"
+TEST_DIR=$(setup_test_repo_with_commit "show-stashes-verbose")
+cd "$TEST_DIR" || exit 1
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Create a stash with multiple file changes
+echo "file1" > file1.txt
+echo "file2" > file2.txt
+git add file1.txt file2.txt
+git stash push -m "Test stash with multiple files"
+
+OUTPUT=$(git_show_stashes -v $DEBUG_MODE 2>&1)
+if echo "$OUTPUT" | grep -q "file(s) changed"; then
+    printf "${GREEN}[PASS]${NC} git_show_stashes -v shows file count\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_stashes -v should show file count. Output: $OUTPUT\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 73: git_show_stashes - Full verbose mode (-vv)
+printf "${YELLOW}[TEST]${NC} git_show_stashes: Full verbose mode (-vv)\n"
+TEST_DIR=$(setup_test_repo_with_commit "show-stashes-full-verbose")
+cd "$TEST_DIR" || exit 1
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Create a stash
+echo "test content" > test.txt
+git add test.txt
+git stash push -m "Test stash for full verbose"
+
+OUTPUT=$(git_show_stashes -vv $DEBUG_MODE 2>&1)
+if echo "$OUTPUT" | grep -q "insertions\|deletions\|changed"; then
+    printf "${GREEN}[PASS]${NC} git_show_stashes -vv shows full diff stats\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_stashes -vv should show diff stats. Output: $OUTPUT\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 74: git_show_stashes - Invalid options
+printf "${YELLOW}[TEST]${NC} git_show_stashes: Invalid options\n"
+TEST_DIR=$(setup_test_repo_with_commit "show-stashes-invalid")
+cd "$TEST_DIR" || exit 1
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+if ! output=$(git_show_stashes --invalid-option 2>&1) && echo "$output" | grep -q "Error: Unknown option"; then
+    printf "${GREEN}[PASS]${NC} git_show_stashes correctly rejects invalid options\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_stashes should reject invalid options. Output: $output\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 75: git_show_stashes - Stashes with special characters
+printf "${YELLOW}[TEST]${NC} git_show_stashes: Stashes with special characters\n"
+TEST_DIR=$(setup_test_repo_with_commit "show-stashes-special")
+cd "$TEST_DIR" || exit 1
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Create stashes with special characters in messages
+echo "special1" > special1.txt
+git add special1.txt
+git stash push -m "[special] chars & (test) #1"
+
+echo "special2" > special2.txt
+git add special2.txt
+git stash push -m "Test with 'quotes' and \"double quotes\""
+
+OUTPUT=$(git_show_stashes $DEBUG_MODE 2>&1)
+if echo "$OUTPUT" | grep -q "\[special\] chars & (test) #1" && \
+   echo "$OUTPUT" | grep -q "Test with 'quotes' and \"double quotes\""; then
+    printf "${GREEN}[PASS]${NC} git_show_stashes handles special characters correctly\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_stashes should handle special characters. Output: $OUTPUT\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
+# Test 76: git_show_stashes - Debug mode
+printf "${YELLOW}[TEST]${NC} git_show_stashes: Debug mode\n"
+TEST_DIR=$(setup_test_repo_with_commit "show-stashes-debug")
+cd "$TEST_DIR" || exit 1
+. "$SCRIPT_DIR/git-toolkit.sh"
+
+# Create a stash for debug testing
+echo "debug" > debug.txt
+git add debug.txt
+git stash push -m "Debug test stash"
+
+OUTPUT=$(git_show_stashes --debug 2>&1)
+if echo "$OUTPUT" | grep -q "=== DEBUG MODE ===" && \
+   echo "$OUTPUT" | grep -q "Listing all stashes"; then
+    printf "${GREEN}[PASS]${NC} git_show_stashes debug mode works correctly\n"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    printf "${RED}[FAIL]${NC} git_show_stashes debug mode should show debug info. Output: $OUTPUT\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+cleanup_test_repo "$TEST_DIR"
+
 # Cleanup and results
 echo
 echo "==============================================="
