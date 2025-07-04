@@ -147,12 +147,22 @@ _git_display_file_status() {
     local file_status_data="$1"
     local color_context="$2"
     
-    echo "$file_status_data" | while IFS=$'\t' read -r file_status file rest; do
+    echo "$file_status_data" | while IFS='	' read -r file_status file rest; do
         case "$file_status" in
             M*) 
-                printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file" ;;
+                if [ "$color_context" = "staged" ]; then
+                    printf "    \033[32mmodified:   \033[32m%s\033[0m\n" "$file"
+                else
+                    printf "    \033[31mmodified:   \033[31m%s\033[0m\n" "$file"
+                fi
+                ;;
             A*) 
-                printf "    \033[32mnew file:   \033[32m%s\033[0m\n" "$file" ;;
+                if [ "$color_context" = "staged" ]; then
+                    printf "    \033[32mnew file:   \033[32m%s\033[0m\n" "$file"
+                else
+                    printf "    \033[31mnew file:   \033[31m%s\033[0m\n" "$file"
+                fi
+                ;;
             D*) 
                 if [ "$color_context" = "staged" ]; then
                     printf "    \033[32mdeleted:    \033[32m%s\033[0m\n" "$file"
@@ -163,9 +173,17 @@ _git_display_file_status() {
             R*) 
                 # For renames, 'file' contains old name and 'rest' contains new name
                 if [ -n "$rest" ]; then
-                    printf "    \033[32mrenamed:    \033[32m%s -> %s\033[0m\n" "$file" "$rest"
+                    if [ "$color_context" = "staged" ]; then
+                        printf "    \033[32mrenamed:    \033[32m%s -> %s\033[0m\n" "$file" "$rest"
+                    else
+                        printf "    \033[31mrenamed:    \033[31m%s -> %s\033[0m\n" "$file" "$rest"
+                    fi
                 else
-                    printf "    \033[32mrenamed:    \033[32m%s\033[0m\n" "$file"
+                    if [ "$color_context" = "staged" ]; then
+                        printf "    \033[32mrenamed:    \033[32m%s\033[0m\n" "$file"
+                    else
+                        printf "    \033[31mrenamed:    \033[31m%s\033[0m\n" "$file"
+                    fi
                 fi
                 ;;
             *) 
