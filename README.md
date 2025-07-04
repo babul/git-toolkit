@@ -626,6 +626,13 @@ Run the comprehensive test suite:
 ./test-git-toolkit.sh
 ```
 
+Test with specific shells for maximum compatibility:
+```bash
+bash ./test-git-toolkit.sh    # Test under bash
+sh ./test-git-toolkit.sh      # Test under POSIX sh
+zsh ./test-git-toolkit.sh     # Test under zsh
+```
+
 Run tests in debug mode for troubleshooting:
 ```bash
 ./test-git-toolkit.sh --debug

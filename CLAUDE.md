@@ -32,13 +32,15 @@ This is a bash-based Git toolkit that provides seven core safety-first utilities
 # Run full test suite (80 tests across 9 categories)
 ./test-git-toolkit.sh
 
-# ALWAYS test under both bash and POSIX sh for maximum compatibility
+# ALWAYS test under bash, POSIX sh, and zsh for maximum compatibility
 bash ./test-git-toolkit.sh    # Test under bash
 sh ./test-git-toolkit.sh      # Test under POSIX sh
+zsh ./test-git-toolkit.sh     # Test under zsh
 
-# Debug mode available for both shells
+# Debug mode available for all shells
 bash ./test-git-toolkit.sh --debug
 sh ./test-git-toolkit.sh --debug
+zsh ./test-git-toolkit.sh --debug
 
 # Test specific function (modify test script to run individual test blocks)
 # Tests are organized by function in the script with clear section headers
@@ -79,7 +81,7 @@ echo "source $(pwd)/git-toolkit.sh" >> ~/.bashrc
 
 **Test Requirements**: When writing or updating code, always write adequate tests and add them to `test-git-toolkit.sh`. If any tests are updated or added, always replace the README.md test output section from the actual test script output (not derived), and replace the test breakdown with accurate counts and categories.
 
-**Dual Shell Testing**: ALWAYS run tests under both `bash` and `sh` to ensure POSIX compatibility. Both shells must pass all 80 tests. Any code changes must be validated against both environments before considering the work complete.
+**Triple Shell Testing**: ALWAYS run tests under `bash`, `sh`, and `zsh` to ensure maximum compatibility. All three shells must pass all tests. Any code changes must be validated against all three environments before considering the work complete.
 
 **Branch Agnostic Testing**: Tests must work in any Git environment regardless of default branch naming conventions. Never assume "main" or "master" - always detect the actual branch name dynamically.
 
@@ -107,7 +109,7 @@ Functions use POSIX-compliant syntax with specific considerations:
 
 **Backward Compatibility**: For users expecting hyphenated function names, conditional aliases are created only in interactive bash/zsh shells to avoid parse errors in POSIX sh
 
-**Testing Protocol**: All changes must pass under both `bash ./test-git-toolkit.sh` and `sh ./test-git-toolkit.sh` commands
+**Testing Protocol**: All changes must pass under `bash ./test-git-toolkit.sh`, `sh ./test-git-toolkit.sh`, and `zsh ./test-git-toolkit.sh` commands
 
 ## Debug Mode and Variable Robustness
 
