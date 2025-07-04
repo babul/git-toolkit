@@ -1103,7 +1103,6 @@ git_clean_stashes() {
     fi
     
     # Get all stashes and their creation timestamps
-    local OLD_STASHES=""
     local stash_count=0
     
     # Use a temporary file to collect old stashes info
