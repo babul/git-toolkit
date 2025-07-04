@@ -26,7 +26,7 @@ PRs welcome!
 
 ## Overview
 
-This toolkit provides seven essential Git utilities:
+This toolkit provides eight essential Git utilities:
 
 | Function | Purpose                                                                                    | Key Benefits |
 |----------|--------------------------------------------------------------------------------------------|--------------|
@@ -36,6 +36,8 @@ This toolkit provides seven essential Git utilities:
 | **`git-clean-branches`** | Clean up merged and orphaned branches with detailed previews                               | Branch protection, detailed reporting, selective cleanup |
 | **`git-squash`** | Squash all commits in current branch into the oldest commit                                | Interactive commit message editing, preserves authorship, uses current date |
 | **`git-status`** | Show count of commits and untracked files, what branch any feature branch forked from      | Smart base detection, enhanced file status display, develop preference |
+| **`git-show-branches`** | Display all local branches with their remote tracking status and sync state                | Visual branch overview, ahead/behind status, remote tracking info |
+| **`git-show-stashes`** | Display all stashes with creation time, name, and age                                      | Stash age visualization, color-coded by age, verbose mode support |
 | **`git-clean-stashes`** | Clean up old stashes from your repository with age-based filtering                    | Age-based filtering, preview before deletion, batch operations |
 
 All functions follow the same safe pattern: show what will happen, ask for confirmation, then execute with clear feedback.
@@ -187,6 +189,46 @@ git-status [options] [branch-name]
 - **Enhanced file status display**: Shows deleted, renamed, modified, and new files with color coding
 - **Visual file states**: Modified/renamed files in green, deleted/untracked files in red
 - Suppresses debug output for clean results
+
+### git-show-branches
+Display all local branches with their remote tracking status and sync state.
+
+```bash
+git-show-branches [options]
+```
+
+**Options:**
+- `-v` Show last commit message for each branch
+- `-vv` Show full last commit details for each branch
+- `--debug` Show debug information
+
+**Features:**
+- **Visual branch overview**: Shows all local branches in a formatted table
+- **Remote tracking status**: Displays remote tracking branch for each local branch
+- **Sync status**: Shows if branches are ahead/behind their remote counterparts
+- **Color coding**: Yellow for branch names, cyan for remotes, green/yellow/red for status
+- **Column alignment**: Auto-adjusts column widths for optimal readability
+- **Commit info**: Shows last commit details with verbose options
+
+### git-show-stashes
+Display all stashes with creation time, name, and age in a formatted table.
+
+```bash
+git-show-stashes [options]
+```
+
+**Options:**
+- `-v` Show number of files changed in each stash
+- `-vv` Show full diff stat for each stash
+- `--debug` Show debug information
+
+**Features:**
+- **Stash visualization**: Shows all stashes with creation date/time, message, and age
+- **Age calculation**: Displays stash age as "X days old" for easy identification
+- **Color coding by age**: Green (<30 days), yellow (30-60 days), red (>60 days)
+- **Column alignment**: Auto-adjusts column widths for optimal readability
+- **Verbose modes**: Shows files changed count or full diff statistics
+- **Chronological order**: Most recent stashes appear first
 
 ### git-clean-stashes
 Clean up old stashes from your repository based on age.
@@ -421,6 +463,73 @@ Date: Tue Jan 16 11:15:00 2024 -0500
     - Improve mobile responsiveness
 ```
 
+### git-show-branches
+```bash
+# Basic usage - show all branches
+$ git-show-branches
+main                   origin/main                   Status: 5 ahead
+feature/test-branch    origin/feature/test-branch    Status: up to date
+hotfix/urgent-fix      (local only)                  Status: 3 local commit(s)
+develop                origin/develop                Status: 2 ahead, 1 behind
+
+# Verbose mode - show last commit
+$ git-show-branches -v
+main                   origin/main                   Status: 5 ahead
+                       └─ abc123d Add new feature
+feature/test-branch    origin/feature/test-branch    Status: up to date
+                       └─ def456e Update tests
+hotfix/urgent-fix      (local only)                  Status: 3 local commit(s)
+                       └─ ghi789f Fix critical bug
+develop                origin/develop                Status: 2 ahead, 1 behind
+                       └─ jkl012g Merge pull request #42
+
+# Full verbose mode - show full commit details
+$ git-show-branches -vv
+main                   origin/main                   Status: 5 ahead
+                       └─ abc123d Add new feature
+                          
+                          Added support for new authentication method
+                          - Implemented OAuth2 flow
+                          - Updated user model
+feature/test-branch    origin/feature/test-branch    Status: up to date
+                       └─ def456e Update tests
+                          
+                          Improved test coverage for auth module
+```
+
+### git-show-stashes
+```bash
+# Basic usage - show all stashes
+$ git-show-stashes
+Stashes:
+
+2025-07-03 14:23:41    On main: WIP authentication fixes          0 days old
+2025-07-01 09:15:22    On feature/ui: Save work before switching  2 days old
+2025-06-15 16:45:33    On develop: Temp save for meeting          18 days old
+2025-05-20 11:30:15    On main: Experimental feature              44 days old
+2025-04-10 08:22:47    On hotfix/bug-123: Quick save              84 days old
+
+# Verbose mode - show files changed
+$ git-show-stashes -v
+Stashes:
+
+2025-07-03 14:23:41    On main: WIP authentication fixes          0 days old
+                       └─ 3 file(s) changed
+2025-07-01 09:15:22    On feature/ui: Save work before switching  2 days old
+                       └─ 7 file(s) changed
+2025-06-15 16:45:33    On develop: Temp save for meeting          18 days old
+                       └─ 1 file(s) changed
+
+# Full verbose mode - show diff stat
+$ git-show-stashes -vv
+Stashes:
+
+2025-07-03 14:23:41    On main: WIP authentication fixes          0 days old
+                       └─ 3 files changed, 45 insertions(+), 12 deletions(-)
+2025-07-01 09:15:22    On feature/ui: Save work before switching  2 days old
+                       └─ 7 files changed, 234 insertions(+), 89 deletions(-)
+```
+
 ### git-clean-stashes
 ```bash
 # Default usage - clean stashes older than 60 days
@@ -523,11 +632,11 @@ Run tests in debug mode for troubleshooting:
 ```
 
 **Test coverage includes:**
-- All seven functions (`git-undo`, `git-redo`, `git-stash`, `git-clean-branches`, `git-squash`, `git-status`, `git-clean-stashes`)
+- All eight functions (`git-undo`, `git-redo`, `git-stash`, `git-clean-branches`, `git-squash`, `git-status`, `git-show-branches`, `git-clean-stashes`)
 - Error conditions and edge cases
 - User interaction scenarios (confirmation, cancellation)
 - Cross-platform compatibility validation
-- **74 total tests** with colored pass/fail output
+- **80 total tests** with colored pass/fail output
 
 ### Test Output Example
 
@@ -538,17 +647,16 @@ Run tests in debug mode for troubleshooting:
 TESTING: Cross-platform compatibility
 ==========================================
 [TEST] Cross-platform: Shell feature compatibility
-Test confirmation function (simulate 'n' response)
-Test prompt (y/N): 
+Test confirmation function (simulate 'n' response)Test prompt (y/N): 
 Test confirmation function (simulate 'y' response)
 Test prompt (y/N): 
 [PASS] All cross-platform utility functions work correctly (6/6)
 [TEST] _git_format_timestamp: Edge case testing
 Testing normal timestamp generation...
 Testing fallback when DATE_FORMAT would be empty...
-Fallback logic works: '2025-07-01 01:12:28'
+Fallback logic works: ''2025-07-03 22:14:46''
 Testing actual function consistency...
-Function consistency works: '2025-07-01 01:12:28'
+Function consistency works: '2025-07-03 22:14:46'
 Testing timestamp consistency...
 [PASS] _git_format_timestamp works correctly in all edge cases (4/4)
 [TEST] Cross-platform: Shell syntax compatibility
@@ -693,15 +801,55 @@ TESTING: git_status function
 [TEST] git_stash: Show deleted and renamed files
 [PASS] git_stash correctly showed deleted, renamed, and new files
 
+==========================================
+TESTING: git_show_branches function
+==========================================
+[TEST] git_show_branches: Not in git repository
+[PASS] git_show_branches correctly detected not in git repository
+[TEST] git_show_branches: Repository with no commits
+[PASS] git_show_branches correctly detected repository with no commits
+[TEST] git_show_branches: Single branch (local only)
+[PASS] git_show_branches correctly showed single local branch
+[TEST] git_show_branches: Multiple branches with different statuses
+[PASS] git_show_branches correctly showed multiple branches
+[TEST] git_show_branches: Verbose mode
+[PASS] git_show_branches -v correctly showed commit information
+[TEST] git_show_branches: Invalid option
+[PASS] git_show_branches correctly handled invalid option
+
+==========================================
+TESTING: git_clean_stashes function
+==========================================
+[TEST] git_clean_stashes: Not in git repository
+[PASS] git_clean_stashes correctly detected not in git repository
+[TEST] git_clean_stashes: Repository with no commits
+[PASS] git_clean_stashes correctly detects repository with no commits
+[TEST] git_clean_stashes: No stashes available
+[PASS] git_clean_stashes correctly reports no stashes
+[TEST] git_clean_stashes: Invalid age parameter
+[PASS] git_clean_stashes correctly rejects invalid age
+[TEST] git_clean_stashes: Cancel cleanup operation
+Saved working directory and index state On main: old test stash
+[PASS] git_clean_stashes correctly handles user cancellation
+[TEST] git_clean_stashes: No old stashes (all recent)
+Saved working directory and index state On main: recent test stash
+[PASS] git_clean_stashes correctly reports no old stashes
+[TEST] git_clean_stashes: Successfully clean old stashes
+Saved working directory and index state On main: test stash to clean
+[PASS] git_clean_stashes successfully cleaned old stashes
+[TEST] git_clean_stashes: Debug mode output
+Saved working directory and index state On main: debug test stash
+[PASS] git_clean_stashes debug mode works correctly
+
 ===============================================
-Test Results: 74 passed, 0 failed
+Test Results: 80 passed, 0 failed
 ===============================================
 All tests passed!
 ```
 
 ### Test Coverage Breakdown
 
-The test suite provides comprehensive coverage across **74 tests** organized into **8 categories**:
+The test suite provides comprehensive coverage across **80 tests** organized into **9 categories**:
 
 | **Category** | **Tests** | **Coverage** |
 |---|---|---|
@@ -712,12 +860,13 @@ The test suite provides comprehensive coverage across **74 tests** organized int
 | **git_redo function** | 9 | Stash restoration, user selection, working directory checks |
 | **git_squash function** | 8 | Commit consolidation, editor integration, branch protection |
 | **git_status function** | 15 | Fork detection, verbose modes, main branch pending commits, branch validation, deleted/renamed files |
+| **git_show_branches function** | 6 | Branch listing, remote tracking status, verbose modes, error handling |
 | **git_clean_stashes function** | 8 | Age filtering, batch deletion, user cancellation, debug mode |
 
 **Test Types:**
-- **Error condition tests** (22 tests): Repository validation, commit existence, permission checks
-- **Safety mechanism tests** (17 tests): Working directory protection, branch safeguards, user confirmation
-- **Core functionality tests** (25 tests): Primary operations, data integrity, expected behaviors, timestamp edge cases, main branch pending commits, deleted/renamed file detection
+- **Error condition tests** (24 tests): Repository validation, commit existence, permission checks
+- **Safety mechanism tests** (18 tests): Working directory protection, branch safeguards, user confirmation
+- **Core functionality tests** (28 tests): Primary operations, data integrity, expected behaviors, timestamp edge cases, main branch pending commits, deleted/renamed file detection
 - **User interaction tests** (10 tests): Cancellation handling, input validation, confirmation prompts
 
 **Key Test Scenarios:**

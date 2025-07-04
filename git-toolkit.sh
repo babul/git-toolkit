@@ -148,6 +148,9 @@ _git_parse_args() {
         git_show_branches)
             VERBOSE_MODE=""
             ;;
+        git_show_stashes)
+            VERBOSE_MODE=""
+            ;;
         git_stash)
             CUSTOM_MESSAGE=""
             ;;
@@ -157,13 +160,19 @@ _git_parse_args() {
     esac
     
     while [ $# -gt 0 ]; do
+        # Skip empty arguments (can happen when variables expand to empty strings)
+        if [ -z "$1" ]; then
+            shift
+            continue
+        fi
+        
         case "$1" in
             --debug)
                 DEBUG_MODE="true"
                 shift
                 ;;
             -v)
-                if [ "$function_name" = "git_status" ] || [ "$function_name" = "git_show_branches" ]; then
+                if [ "$function_name" = "git_status" ] || [ "$function_name" = "git_show_branches" ] || [ "$function_name" = "git_show_stashes" ]; then
                     VERBOSE_MODE="oneline"
                     shift
                 else
@@ -173,7 +182,7 @@ _git_parse_args() {
                 fi
                 ;;
             -vv)
-                if [ "$function_name" = "git_status" ] || [ "$function_name" = "git_show_branches" ]; then
+                if [ "$function_name" = "git_status" ] || [ "$function_name" = "git_show_branches" ] || [ "$function_name" = "git_show_stashes" ]; then
                     VERBOSE_MODE="full"
                     shift
                 else
@@ -266,6 +275,12 @@ _git_show_usage() {
             echo "Usage: git_show_branches [-v|-vv] [--debug]"
             echo "  -v       Show last commit for each branch"
             echo "  -vv      Show full last commit details for each branch"
+            echo "  --debug  Show debug information"
+            ;;
+        git_show_stashes)
+            echo "Usage: git_show_stashes [-v|-vv] [--debug]"
+            echo "  -v       Show number of files changed in each stash"
+            echo "  -vv      Show full diff stat for each stash"
             echo "  --debug  Show debug information"
             ;;
         git_clean_stashes)
@@ -1338,15 +1353,6 @@ git_status() {
 }
 
 git_show_branches() {
-    # Temporarily disable debug output
-    local old_x_setting=""
-    case $- in
-        *x*) 
-            old_x_setting="x"
-            set +x
-            ;;
-    esac
-    
     # Parse command line arguments using shared utility
     _git_parse_args "git_show_branches" "$@" || return 1
     
@@ -1394,8 +1400,8 @@ git_show_branches() {
                 fi
                 
                 # Check remote ref length
-                remote_ref=$(git config "branch.$branch.remote" 2>/dev/null)
-                remote_branch=$(git config "branch.$branch.merge" 2>/dev/null | sed 's|refs/heads/||')
+                remote_ref=$(git config "branch.$branch.remote" 2>/dev/null || true)
+                remote_branch=$(git config "branch.$branch.merge" 2>/dev/null | sed 's|refs/heads/||' || true)
                 
                 if [ -n "$remote_ref" ] && [ -n "$remote_branch" ]; then
                     full_remote="${remote_ref}/${remote_branch}"
@@ -1426,68 +1432,215 @@ git_show_branches() {
     # Process each branch
     while read -r branch; do
         if [ -n "$branch" ]; then
-            # Use subshell to isolate from debug mode
-            (
-                # Pass in the column widths
-                local max_branch_len="$max_branch_len"
-                local max_remote_len="$max_remote_len"
+            # Get remote tracking info
+            local remote_ref remote_branch
+            remote_ref=$(git config "branch.$branch.remote" 2>/dev/null || true)
+            remote_branch=$(git config "branch.$branch.merge" 2>/dev/null | sed 's|refs/heads/||' || true)
+            
+            # Format branch name with padding
+            local branch_display
+            local fmt_str="%-${max_branch_len}s"
+            branch_display=$(printf "$fmt_str" "$branch")
+            
+            if [ -n "$remote_ref" ] && [ -n "$remote_branch" ]; then
+                # Has remote tracking
+                local full_remote_ref="$remote_ref/$remote_branch"
+                local remote_display
+                local fmt_str2="%-${max_remote_len}s"
+                remote_display=$(printf "$fmt_str2" "$full_remote_ref")
                 
-                # Get remote tracking info
-                local remote_ref remote_branch
-                remote_ref=$(git config "branch.$branch.remote" 2>/dev/null)
-                remote_branch=$(git config "branch.$branch.merge" 2>/dev/null | sed 's|refs/heads/||')
-                
-                # Format branch name with padding
-                local branch_display
-                local fmt_str="%-${max_branch_len}s"
-                branch_display=$(printf "$fmt_str" "$branch")
-                
-                if [ -n "$remote_ref" ] && [ -n "$remote_branch" ]; then
-                    # Has remote tracking
-                    local full_remote_ref="$remote_ref/$remote_branch"
-                    local remote_display
-                    local fmt_str2="%-${max_remote_len}s"
-                    remote_display=$(printf "$fmt_str2" "$full_remote_ref")
+                # Check if remote branch exists
+                if git rev-parse --verify "$full_remote_ref" >/dev/null 2>&1; then
+                    # Get ahead/behind status
+                    local ahead behind
+                    ahead=$(git rev-list --count "$full_remote_ref..$branch" 2>/dev/null || echo "0")
+                    behind=$(git rev-list --count "$branch..$full_remote_ref" 2>/dev/null || echo "0")
                     
-                    # Check if remote branch exists
-                    if git rev-parse --verify "$full_remote_ref" >/dev/null 2>&1; then
-                        # Get ahead/behind status
-                        local ahead behind
-                        ahead=$(git rev-list --count "$full_remote_ref..$branch" 2>/dev/null || echo "0")
-                        behind=$(git rev-list --count "$branch..$full_remote_ref" 2>/dev/null || echo "0")
-                        
-                        if [ "$ahead" -gt 0 ] && [ "$behind" -gt 0 ]; then
-                            printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[31m%s ahead, %s behind\033[0m\n" "$branch_display" "$remote_display" "$ahead" "$behind"
-                        elif [ "$ahead" -gt 0 ]; then
-                            printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[33m%s ahead\033[0m\n" "$branch_display" "$remote_display" "$ahead"
-                        elif [ "$behind" -gt 0 ]; then
-                            printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[31m%s behind\033[0m\n" "$branch_display" "$remote_display" "$behind"
-                        else
-                            printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[32mup to date\033[0m\n" "$branch_display" "$remote_display"
-                        fi
+                    if [ "$ahead" -gt 0 ] && [ "$behind" -gt 0 ]; then
+                        printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[31m%s ahead, %s behind\033[0m\n" "$branch_display" "$remote_display" "$ahead" "$behind"
+                    elif [ "$ahead" -gt 0 ]; then
+                        printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[33m%s ahead\033[0m\n" "$branch_display" "$remote_display" "$ahead"
+                    elif [ "$behind" -gt 0 ]; then
+                        printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[31m%s behind\033[0m\n" "$branch_display" "$remote_display" "$behind"
                     else
-                        printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[31mremote branch gone\033[0m\n" "$branch_display" "$remote_display"
+                        printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[32mup to date\033[0m\n" "$branch_display" "$remote_display"
                     fi
                 else
-                    # No remote tracking
-                    local commit_count
-                    commit_count=$(git rev-list --count "$branch" 2>/dev/null || echo "0")
-                    local local_only_display
-                    local_only_display=$(printf "%-${max_remote_len}s" "(local only)")
-                    printf "\033[33m%s\033[0m  \033[90m%s\033[0m  Status: \033[90m%s local commit(s)\033[0m\n" "$branch_display" "$local_only_display" "$commit_count"
+                    printf "\033[33m%s\033[0m  \033[36m%s\033[0m  Status: \033[31mremote branch gone\033[0m\n" "$branch_display" "$remote_display"
                 fi
-                
-                # Show last commit info if verbose
-                if [ -n "$VERBOSE_MODE" ]; then
-                    local last_commit
-                    last_commit=$(git log -1 --format="%h %s" "$branch" 2>/dev/null || echo "No commits")
-                    local indent_len=$((max_branch_len + 2 + max_remote_len + 2))
-                    printf "%${indent_len}s└─ %s\n" "" "$last_commit"
-                fi
-            ) 2>/dev/null
+            else
+                # No remote tracking
+                local commit_count
+                commit_count=$(git rev-list --count "$branch" 2>/dev/null || echo "0")
+                local local_only_display
+                local_only_display=$(printf "%-${max_remote_len}s" "(local only)")
+                printf "\033[33m%s\033[0m  \033[90m%s\033[0m  Status: \033[90m%s local commit(s)\033[0m\n" "$branch_display" "$local_only_display" "$commit_count"
+            fi
+            
+            # Show last commit info if verbose
+            if [ -n "$VERBOSE_MODE" ]; then
+                local last_commit
+                last_commit=$(git log -1 --format="%h %s" "$branch" 2>/dev/null || echo "No commits")
+                local indent_len=$((max_branch_len + 2 + max_remote_len + 2))
+                printf "%${indent_len}s└─ %s\n" "" "$last_commit"
+            fi
         fi
     done < "$temp_file"
     
+    [ -f "$temp_file" ] && rm -f "$temp_file"
+}
+
+git_show_stashes() {
+    # Temporarily disable debug output
+    local old_x_setting=""
+    case $- in
+        *x*) 
+            old_x_setting="x"
+            set +x
+            ;;
+    esac
+    
+    # Parse command line arguments using shared utility
+    _git_parse_args "git_show_stashes" "$@" || return 1
+    
+    _git_validate_all || return 1
+    
+    # Debug output
+    if [ "$DEBUG_MODE" = "true" ]; then
+        echo "=== DEBUG MODE ==="
+        echo "Listing all stashes with creation time and age"
+        echo "=================="
+    fi
+    
+    # Get current timestamp for age calculation
+    local CURRENT_TIMESTAMP
+    CURRENT_TIMESTAMP=$(date +%s 2>/dev/null)
+    if [ -z "$CURRENT_TIMESTAMP" ]; then
+        echo "✗ Error: Failed to get current timestamp"
+        return 1
+    fi
+    
+    # Check if there are any stashes
+    local stash_count
+    stash_count=$(git stash list 2>/dev/null | wc -l)
+    
+    if [ "$stash_count" -eq 0 ]; then
+        echo "✓ No stashes found"
+        return 0
+    fi
+    
+    # Use temporary file to collect stash info
+    local temp_file
+    temp_file=$(mktemp -t git-show-stashes.XXXXXX) || {
+        echo "✗ Error: Could not create temporary file"
+        return 1
+    }
+    
+    # Get stash information with timestamps
+    git stash list --format="%gd|%ct|%gs" 2>/dev/null | while IFS='|' read -r stash_ref stash_timestamp stash_msg; do
+        if [ -n "$stash_ref" ] && [ -n "$stash_timestamp" ]; then
+            # Calculate age in days
+            local age_seconds=$((CURRENT_TIMESTAMP - stash_timestamp))
+            local age_days=$((age_seconds / 86400))
+            
+            # Format date for display
+            local formatted_date
+            formatted_date=$(_git_format_date_quiet "$stash_timestamp")
+            
+            # Write to temp file: date|name|age|ref
+            printf "%s|%s|%s|%s\n" "$formatted_date" "$stash_msg" "$age_days" "$stash_ref" >> "$temp_file"
+        fi
+    done
+    
+    # Check if we have any data
+    if [ ! -s "$temp_file" ]; then
+        [ -f "$temp_file" ] && rm -f "$temp_file"
+        echo "✓ No stashes found"
+        return 0
+    fi
+    
+    # Calculate column widths for alignment
+    local max_date_len=19  # Default for YYYY-MM-DD HH:MM:SS format
+    local max_name_len=0
+    local max_age_len=8   # Minimum for "days old"
+    
+    # Calculate maximum lengths in a subshell to avoid debug output
+    local length_result
+    length_result=$(
+        while IFS='|' read -r formatted_date stash_msg age_days stash_ref; do
+            # Check name length
+            name_len=${#stash_msg}
+            if [ "$name_len" -gt "$max_name_len" ]; then
+                max_name_len=$name_len
+            fi
+            
+            # Check age display length
+            age_display="$age_days days old"
+            age_len=${#age_display}
+            if [ "$age_len" -gt "$max_age_len" ]; then
+                max_age_len=$age_len
+            fi
+        done < "$temp_file"
+        echo "$max_name_len $max_age_len"
+    ) 2>/dev/null
+    
+    # Parse the results
+    max_name_len=$(echo "$length_result" | cut -d' ' -f1)
+    max_age_len=$(echo "$length_result" | cut -d' ' -f2)
+    
+    # Add padding
+    max_date_len=$((max_date_len + 2))
+    max_name_len=$((max_name_len + 2))
+    max_age_len=$((max_age_len + 2))
+    
+    # Print header
+    printf "\033[1mStashes:\033[0m\n\n"
+    
+    # Display stashes
+    while IFS='|' read -r formatted_date stash_msg age_days stash_ref; do
+        if [ -n "$stash_ref" ]; then
+            # Format columns with proper padding
+            local date_display name_display age_display
+            local fmt_date="%-${max_date_len}s"
+            local fmt_name="%-${max_name_len}s"
+            local fmt_age="%-${max_age_len}s"
+            
+            date_display=$(printf "$fmt_date" "$formatted_date")
+            name_display=$(printf "$fmt_name" "$stash_msg")
+            age_display=$(printf "$fmt_age" "$age_days days old")
+            
+            # Color code based on age
+            if [ "$age_days" -gt 60 ]; then
+                # Old stashes (>60 days) in red
+                printf "\033[90m%s\033[0m  \033[33m%s\033[0m  \033[31m%s\033[0m\n" "$date_display" "$name_display" "$age_display"
+            elif [ "$age_days" -gt 30 ]; then
+                # Medium age (30-60 days) in yellow
+                printf "\033[90m%s\033[0m  \033[33m%s\033[0m  \033[33m%s\033[0m\n" "$date_display" "$name_display" "$age_display"
+            else
+                # Recent stashes (<30 days) in green
+                printf "\033[90m%s\033[0m  \033[33m%s\033[0m  \033[32m%s\033[0m\n" "$date_display" "$name_display" "$age_display"
+            fi
+            
+            # Show stash details if verbose mode
+            if [ -n "$VERBOSE_MODE" ]; then
+                local indent=$((max_date_len + 2))
+                
+                if [ "$VERBOSE_MODE" = "oneline" ]; then
+                    # Show files changed
+                    local files_changed
+                    files_changed=$(git stash show --name-only "$stash_ref" 2>/dev/null | wc -l)
+                    printf "%${indent}s└─ %s file(s) changed\n" "" "$files_changed"
+                elif [ "$VERBOSE_MODE" = "full" ]; then
+                    # Show full diff stat
+                    local diff_stat
+                    diff_stat=$(git stash show --stat "$stash_ref" 2>/dev/null | tail -1)
+                    printf "%${indent}s└─ %s\n" "" "$diff_stat"
+                fi
+            fi
+        fi
+    done < "$temp_file"
+    
+    # Cleanup
     [ -f "$temp_file" ] && rm -f "$temp_file"
     
     # Restore debug setting if it was enabled
@@ -1510,6 +1663,7 @@ if [ -n "$BASH_VERSION" ] || [ -n "$ZSH_VERSION" ]; then
         alias git-squash='git_squash'
         alias git-status='git_status'
         alias git-show-branches='git_show_branches'
+        alias git-show-stashes='git_show_stashes'
     }
     
     # Only run if we're in an interactive shell or aliases are enabled
