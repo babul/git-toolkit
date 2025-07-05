@@ -525,7 +525,8 @@ git_undo() {
     } > "$temp_metadata"
     
     # Stage the metadata file and create stash with all changes
-    git add "$temp_metadata"
+    # Use -f to force add in case the file is ignored
+    git add -f "$temp_metadata"
     git add -A
     
     # Create stash - this should now include the metadata file and all reset changes
