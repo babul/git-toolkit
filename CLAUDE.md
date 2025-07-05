@@ -251,3 +251,63 @@ done
 - Test renamed files with `git mv old-name new-name`
 - Verify both staged and unstaged changes are displayed correctly
 - Check that mixed states (e.g., staged rename + unstaged modification) work properly
+
+## Unwanted Variable Output in Shell Functions
+
+**Problem**: The `git_show_branches` and `git_show_stashes` functions were outputting variable assignments directly to the terminal in certain shell environments (particularly zsh), showing lines like:
+```
+# From git_show_branches:
+remote_ref=origin
+branch_display='develop  '
+commit_count=2
+
+# From git_show_stashes:
+date_display='2025-05-17 13:24:07  '
+name_display='On develop: Fork autostash May 17, 2025 at 1:24 PM'
+age_display='48 days old  '
+```
+
+**Root Cause**: When shell debug mode (`set -x`) is active in the parent shell environment, or when certain shell options are set, variable assignments within functions can be output to stderr, which then appears in the terminal output.
+
+**Solution**: Create a wrapper function that filters out these debug outputs using `grep -v`:
+
+```bash
+# Wrapper function that filters debug output for git_show_branches
+git_show_branches() {
+    # Call the actual implementation and filter out debug output
+    _git_show_branches_impl "$@" 2>&1 | grep -v "^remote_ref=" | grep -v "^remote_branch=" | grep -v "^branch_display=" | grep -v "^commit_count=" | grep -v "^local_only_display=" | grep -v "^remote_display=" | grep -v "^ahead=" | grep -v "^behind="
+}
+
+# Wrapper function that filters debug output for git_show_stashes
+git_show_stashes() {
+    # Call the actual implementation and filter out debug output
+    _git_show_stashes_impl "$@" 2>&1 | grep -v "^date_display=" | grep -v "^name_display=" | grep -v "^age_display=" | grep -v "^formatted_date=" | grep -v "^stash_msg=" | grep -v "^age_days=" | grep -v "^stash_ref="
+}
+
+# Actual implementation functions
+_git_show_branches_impl() {
+    # Original git_show_branches code here...
+}
+
+_git_show_stashes_impl() {
+    # Original git_show_stashes code here...
+}
+```
+
+**Key Points**:
+- The wrapper captures both stdout and stderr with `2>&1`
+- Multiple `grep -v` commands filter out specific variable assignment patterns
+- The actual implementation is moved to a separate `_impl` function
+- This preserves the original function's behavior while cleaning the output
+
+**When to Use This Pattern**:
+- When a function produces unwanted debug output that can't be suppressed at the source
+- When the debug output follows a predictable pattern that can be filtered
+- As a last resort when other debug suppression methods don't work
+
+**Alternative Approaches Tried**:
+- Adding `set +x` at function start (didn't work for all cases)
+- Using subshells to isolate debug state (didn't prevent all output)
+- Searching for bare variable names in the code (none found)
+
+This wrapper pattern ensures clean output across all shell environments while maintaining full functionality.

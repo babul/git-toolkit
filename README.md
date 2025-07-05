@@ -38,7 +38,7 @@ This toolkit provides eight essential Git utilities:
 | **`git-squash`** | Squash all commits in current branch into the oldest commit                                | Interactive commit message editing, preserves authorship, uses current date |
 | **`git-status`** | Show count of commits and untracked files, what branch any feature branch forked from      | Smart base detection, enhanced file status display, develop preference |
 | **`git-show-branches`** | Display all local branches with their remote tracking status and sync state                | Visual branch overview, ahead/behind status, remote tracking info |
-| **`git-show-stashes`** | Display all stashes with creation time, name, and age                                      | Stash age visualization, color-coded by age, verbose mode support |
+| **`git-show-stashes`** | Display all stashes with name and smart age formatting                                     | Smart age display (minutes/hours/days), color-coded by age, verbose mode support |
 | **`git-clean-stashes`** | Clean up old stashes from your repository with age-based filtering                    | Age-based filtering, preview before deletion, batch operations |
 
 All functions follow the same safe pattern: show what will happen, ask for confirmation, then execute with clear feedback.
@@ -212,7 +212,7 @@ git-show-branches [options]
 - **Commit info**: Shows last commit details with verbose options
 
 ### git-show-stashes
-Display all stashes with creation time, name, and age in a formatted table.
+Display all stashes with their names and age in a clean, formatted table.
 
 ```bash
 git-show-stashes [options]
@@ -224,8 +224,11 @@ git-show-stashes [options]
 - `--debug` Show debug information
 
 **Features:**
-- **Stash visualization**: Shows all stashes with creation date/time, message, and age
-- **Age calculation**: Displays stash age as "X days old" for easy identification
+- **Stash visualization**: Shows all stashes with message and age (no date/time for cleaner output)
+- **Smart age display**: 
+  - Recent stashes: "< 1 minute", "5 minutes", "45 minutes"
+  - Hours: "1 hour", "2 hours 30 min", "23 hours 59 min"
+  - Days: "1 day", "30 days", "90 days"
 - **Color coding by age**: Green (<30 days), yellow (30-60 days), red (>60 days)
 - **Column alignment**: Auto-adjusts column widths for optimal readability
 - **Verbose modes**: Shows files changed count or full diff statistics
@@ -504,31 +507,31 @@ feature/test-branch    origin/feature/test-branch    Status: up to date
 $ git-show-stashes
 Stashes:
 
-2025-07-03 14:23:41    On main: WIP authentication fixes          0 days old
-2025-07-01 09:15:22    On feature/ui: Save work before switching  2 days old
-2025-06-15 16:45:33    On develop: Temp save for meeting          18 days old
-2025-05-20 11:30:15    On main: Experimental feature              44 days old
-2025-04-10 08:22:47    On hotfix/bug-123: Quick save              84 days old
+On main: WIP authentication fixes                5 minutes
+On feature/ui: Save work before switching        2 hours 30 min
+On develop: Temp save for meeting                18 days
+On main: Experimental feature                    44 days
+On hotfix/bug-123: Quick save                    84 days
 
 # Verbose mode - show files changed
 $ git-show-stashes -v
 Stashes:
 
-2025-07-03 14:23:41    On main: WIP authentication fixes          0 days old
-                       └─ 3 file(s) changed
-2025-07-01 09:15:22    On feature/ui: Save work before switching  2 days old
-                       └─ 7 file(s) changed
-2025-06-15 16:45:33    On develop: Temp save for meeting          18 days old
-                       └─ 1 file(s) changed
+On main: WIP authentication fixes                5 minutes
+└─ 3 file(s) changed
+On feature/ui: Save work before switching        2 hours 30 min
+└─ 7 file(s) changed
+On develop: Temp save for meeting                18 days
+└─ 1 file(s) changed
 
 # Full verbose mode - show diff stat
 $ git-show-stashes -vv
 Stashes:
 
-2025-07-03 14:23:41    On main: WIP authentication fixes          0 days old
-                       └─ 3 files changed, 45 insertions(+), 12 deletions(-)
-2025-07-01 09:15:22    On feature/ui: Save work before switching  2 days old
-                       └─ 7 files changed, 234 insertions(+), 89 deletions(-)
+On main: WIP authentication fixes                5 minutes
+└─ 3 files changed, 45 insertions(+), 12 deletions(-)
+On feature/ui: Save work before switching        2 hours 30 min
+└─ 7 files changed, 234 insertions(+), 89 deletions(-)
 ```
 
 ### git-clean-stashes

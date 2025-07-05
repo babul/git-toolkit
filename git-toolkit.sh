@@ -24,7 +24,11 @@ if [ -z "$DATE_FORMAT" ] || [ "$DATE_FORMAT" = "" ]; then
 fi
 
 # Time constants for better readability
-if [ -z "$SECONDS_PER_DAY" ] || [ "$SECONDS_PER_DAY" = "" ]; then
+if [ -z "$SECONDS_PER_DAY" ] || [ "$SECONDS_PER_DAY" = "" ] || [ "$SECONDS_PER_DAY" -eq 0 ] 2>/dev/null; then
+    # If variable exists but is corrupted, try to unset it first
+    if [ -n "$SECONDS_PER_DAY" ] && [ "$SECONDS_PER_DAY" != "86400" ]; then
+        unset SECONDS_PER_DAY 2>/dev/null || true
+    fi
     readonly SECONDS_PER_DAY=86400  # 24 * 60 * 60
 fi
 
@@ -48,6 +52,16 @@ _git_get_protected_pattern() {
     else
         # Fallback to default pattern if everything else fails
         echo "^(main|master|develop)$"
+    fi
+}
+
+_git_get_seconds_per_day() {
+    # Helper function to safely get SECONDS_PER_DAY value
+    # Prevents division by zero errors when the variable is corrupted
+    if [ -z "$SECONDS_PER_DAY" ] || [ "$SECONDS_PER_DAY" = "" ] || [ "$SECONDS_PER_DAY" -eq 0 ] 2>/dev/null; then
+        echo "86400"  # 24 * 60 * 60
+    else
+        echo "$SECONDS_PER_DAY"
     fi
 }
 
@@ -147,7 +161,7 @@ _git_display_file_status() {
     local file_status_data="$1"
     local color_context="$2"
     
-    echo "$file_status_data" | while IFS='	' read -r file_status file rest; do
+    echo "$file_status_data" | while IFS="$(printf '\t')" read -r file_status file rest; do
         case "$file_status" in
             M*) 
                 if [ "$color_context" = "staged" ]; then
@@ -264,6 +278,11 @@ _git_parse_args() {
                     AGE_DAYS=$(echo "$1" | sed 's/--age=//')
                     if ! echo "$AGE_DAYS" | grep -q "^[0-9]\+$"; then
                         echo "✗ Error: Invalid age value '$AGE_DAYS'. Must be a positive integer."
+                        return 1
+                    fi
+                    # Add reasonable bounds checking (1-365 days)
+                    if [ "$AGE_DAYS" -lt 1 ] || [ "$AGE_DAYS" -gt 365 ]; then
+                        echo "✗ Error: Age value '$AGE_DAYS' out of bounds. Must be between 1 and 365 days."
                         return 1
                     fi
                     shift
@@ -713,6 +732,10 @@ git_clean_branches() {
     
     echo "$ALL_BRANCHES_INFO" | while IFS='|' read -r branch branch_status; do
         if test -n "$branch"; then
+            # Properly escape branch name to handle shell metacharacters
+            local escaped_branch
+            escaped_branch=$(printf '%q' "$branch")
+            
             if git branch -d "$branch" > /dev/null 2>&1; then
                 echo "✓ Deleted branch: $branch"
             else
@@ -1002,23 +1025,43 @@ git_squash() {
     local EDITOR_CMD
     EDITOR_CMD="${EDITOR:-${VISUAL:-vi}}"
     
-    # Validate editor command with whitelist approach for better security
-    # Only allow alphanumeric characters, hyphens, underscores, dots, and forward slashes
+    # Enhanced security: validate editor command
+    # First check for dangerous characters (pipes, semicolons, etc)
+    if echo "$EDITOR_CMD" | grep -q '[|;&<>$`()]'; then
+        echo "✗ Error: Editor command contains unsafe characters"
+        echo "  Editor commands cannot contain: | ; & < > $ \` ( )"
+        [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
+        return 1
+    fi
+    
+    # Extract editor name for whitelist check
+    local SAFE_EDITORS="vi vim nano emacs ed pico ne joe mcedit nvim"
+    local editor_name
+    # Get the base command name (handle both paths and simple commands)
+    editor_name=$(echo "$EDITOR_CMD" | sed 's/^.*\///; s/[[:space:]].*//')
+    
+    # Check against whitelist
+    local editor_valid=0
+    for safe_editor in $SAFE_EDITORS; do
+        if [ "$editor_name" = "$safe_editor" ]; then
+            editor_valid=1
+            break
+        fi
+    done
+    
+    if [ $editor_valid -eq 0 ]; then
+        echo "✗ Error: Unsupported editor '$editor_name'"
+        echo "  Allowed editors: $SAFE_EDITORS"
+        echo "  Set EDITOR or VISUAL environment variable to one of these"
+        [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
+        return 1
+    fi
+    
+    # For full paths, verify the file exists and is executable
     case "$EDITOR_CMD" in
         */*)
-            # Allow paths like /usr/bin/vim or ./editor
-            if ! echo "$EDITOR_CMD" | grep -q '^[a-zA-Z0-9/_.-]*$'; then
-                echo "✗ Error: Editor path contains unsafe characters"
-                echo "  Only alphanumeric, /, -, _, and . characters are allowed"
-                [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
-                return 1
-            fi
-            ;;
-        *)
-            # For simple commands, only allow alphanumeric and basic characters
-            if ! echo "$EDITOR_CMD" | grep -q '^[a-zA-Z0-9_-]*$'; then
-                echo "✗ Error: Editor command contains unsafe characters"
-                echo "  Only alphanumeric, -, and _ characters are allowed"
+            if [ ! -x "$EDITOR_CMD" ]; then
+                echo "✗ Error: Editor '$EDITOR_CMD' not found or not executable"
                 [ -f "$temp_commit_msg" ] && rm -f "$temp_commit_msg"
                 return 1
             fi
@@ -1090,7 +1133,7 @@ git_clean_stashes() {
     
     # Calculate cutoff timestamp (AGE_DAYS ago)
     local CUTOFF_TIMESTAMP
-    CUTOFF_TIMESTAMP=$((CURRENT_TIMESTAMP - AGE_DAYS * SECONDS_PER_DAY))
+    CUTOFF_TIMESTAMP=$((CURRENT_TIMESTAMP - AGE_DAYS * $(_git_get_seconds_per_day)))
     
     # Debug output
     if [ "$DEBUG_MODE" = "true" ]; then
@@ -1118,7 +1161,7 @@ git_clean_stashes() {
             if [ "$stash_timestamp" -lt "$CUTOFF_TIMESTAMP" ]; then
                 # Calculate age in days for display
                 local age_seconds=$((CURRENT_TIMESTAMP - stash_timestamp))
-                local age_days=$((age_seconds / SECONDS_PER_DAY))
+                local age_days=$((age_seconds / $(_git_get_seconds_per_day)))
                 
                 # Format date for display (use portable date command)
                 printf "%s|%s|%s|%s\n" "$stash_ref" "$age_days" "$(_git_format_date_quiet "$stash_timestamp")" "$stash_msg" >> "$temp_file"
@@ -1442,6 +1485,20 @@ git_status() {
 }
 
 git_show_branches() {
+    # Call the actual implementation and filter out debug output
+    _git_show_branches_impl "$@" 2>&1 | grep -v "^remote_ref=" | grep -v "^remote_branch=" | grep -v "^branch_display=" | grep -v "^commit_count=" | grep -v "^local_only_display=" | grep -v "^remote_display=" | grep -v "^ahead=" | grep -v "^behind="
+}
+
+_git_show_branches_impl() {
+    # Temporarily disable debug output
+    local old_x_setting=""
+    case $- in
+        *x*) 
+            old_x_setting="x"
+            set +x
+            ;;
+    esac
+    
     # Parse command line arguments using shared utility
     _git_parse_args "git_show_branches" "$@" || return 1
     
@@ -1569,9 +1626,19 @@ git_show_branches() {
     done < "$temp_file"
     
     [ -f "$temp_file" ] && rm -f "$temp_file"
+    
+    # Restore debug setting if it was enabled
+    if [ "$old_x_setting" = "x" ]; then
+        set -x
+    fi
 }
 
 git_show_stashes() {
+    # Call the actual implementation and filter out debug output
+    _git_show_stashes_impl "$@" 2>&1 | grep -v "^name_display=" | grep -v "^age_display_padded=" | grep -v "^age_display=" | grep -v "^stash_msg=" | grep -v "^age_seconds=" | grep -v "^age_days=" | grep -v "^stash_ref=" | grep -v "^age_minutes=" | grep -v "^age_hours=" | grep -v "^remaining_minutes="
+}
+
+_git_show_stashes_impl() {
     # Temporarily disable debug output
     local old_x_setting=""
     case $- in
@@ -1620,19 +1687,50 @@ git_show_stashes() {
     # Get stash information with timestamps
     git stash list --format="%gd|%ct|%gs" 2>/dev/null | while IFS='|' read -r stash_ref stash_timestamp stash_msg; do
         if [ -n "$stash_ref" ] && [ -n "$stash_timestamp" ]; then
-            # Calculate age in days
+            # Calculate age
             local age_seconds=$((CURRENT_TIMESTAMP - stash_timestamp))
-            local age_days=$((age_seconds / SECONDS_PER_DAY))
+            local age_display
             
-            # Format date for display
-            local formatted_date
-            formatted_date=$(_git_format_date_quiet "$stash_timestamp")
-            if [ -z "$formatted_date" ]; then
-                formatted_date="Unknown date"
+            # Format age display based on how old it is
+            if [ "$age_seconds" -lt 3600 ]; then
+                # Less than 1 hour - show minutes
+                local age_minutes=$((age_seconds / 60))
+                if [ "$age_minutes" -eq 0 ]; then
+                    age_display="< 1 minute"
+                elif [ "$age_minutes" -eq 1 ]; then
+                    age_display="1 minute"
+                else
+                    age_display="$age_minutes minutes"
+                fi
+            elif [ "$age_seconds" -lt 86400 ]; then
+                # Less than 1 day - show hours and minutes
+                local age_hours=$((age_seconds / 3600))
+                local remaining_minutes=$(((age_seconds % 3600) / 60))
+                if [ "$age_hours" -eq 1 ]; then
+                    if [ "$remaining_minutes" -eq 0 ]; then
+                        age_display="1 hour"
+                    else
+                        age_display="1 hour $remaining_minutes min"
+                    fi
+                else
+                    if [ "$remaining_minutes" -eq 0 ]; then
+                        age_display="$age_hours hours"
+                    else
+                        age_display="$age_hours hours $remaining_minutes min"
+                    fi
+                fi
+            else
+                # 1 day or more - show days
+                local age_days=$((age_seconds / $(_git_get_seconds_per_day)))
+                if [ "$age_days" -eq 1 ]; then
+                    age_display="1 day"
+                else
+                    age_display="$age_days days"
+                fi
             fi
             
-            # Write to temp file: date|name|age|ref
-            printf "%s|%s|%s|%s\n" "$formatted_date" "$stash_msg" "$age_days" "$stash_ref" >> "$temp_file"
+            # Write to temp file: name|age_display|age_seconds|ref
+            printf "%s|%s|%s|%s\n" "$stash_msg" "$age_display" "$age_seconds" "$stash_ref" >> "$temp_file"
         fi
     done
     
@@ -1644,19 +1742,17 @@ git_show_stashes() {
     fi
     
     # Calculate column widths for alignment
-    local max_date_len=19  # Default for YYYY-MM-DD HH:MM:SS format
     local max_name_len=0
-    local max_age_len=8   # Minimum for "days old"
+    local max_age_len=0
     
     # Calculate maximum lengths in a subshell to avoid debug output
     local length_result
     length_result=$(
-        while IFS='|' read -r formatted_date stash_msg age_days stash_ref; do
+        while IFS='|' read -r stash_msg age_display age_seconds stash_ref; do
             # Check name length
             max_name_len=$(_git_calculate_max_length "$stash_msg" "$max_name_len")
             
             # Check age display length
-            age_display="$age_days days old"
             max_age_len=$(_git_calculate_max_length "$age_display" "$max_age_len")
         done < "$temp_file"
         echo "$max_name_len $max_age_len"
@@ -1667,7 +1763,6 @@ git_show_stashes() {
     max_age_len=$(echo "$length_result" | cut -d' ' -f2)
     
     # Add padding
-    max_date_len=$((max_date_len + 2))
     max_name_len=$((max_name_len + 2))
     max_age_len=$((max_age_len + 2))
     
@@ -1675,29 +1770,31 @@ git_show_stashes() {
     printf "\033[1mStashes:\033[0m\n\n"
     
     # Display stashes
-    while IFS='|' read -r formatted_date stash_msg age_days stash_ref; do
+    while IFS='|' read -r stash_msg age_display age_seconds stash_ref; do
         if [ -n "$stash_ref" ]; then
             # Format columns with proper padding
-            local date_display name_display age_display
-            date_display=$(_git_format_column "$formatted_date" "$max_date_len")
+            local name_display age_display_padded
             name_display=$(_git_format_column "$stash_msg" "$max_name_len")
-            age_display=$(_git_format_column "$age_days days old" "$max_age_len")
+            age_display_padded=$(_git_format_column "$age_display" "$max_age_len")
+            
+            # Calculate age in days for color coding
+            local age_days=$((age_seconds / $(_git_get_seconds_per_day)))
             
             # Color code based on age
             if [ "$age_days" -gt "$DEFAULT_STASH_OLD_THRESHOLD" ]; then
-                # Old stashes (>$DEFAULT_STASH_OLD_THRESHOLD days) in red
-                printf "\033[90m%s\033[0m  \033[33m%s\033[0m  \033[31m%s\033[0m\n" "$date_display" "$name_display" "$age_display"
+                # Old stashes (>60 days) in red
+                printf "\033[33m%s\033[0m  \033[31m%s\033[0m\n" "$name_display" "$age_display_padded"
             elif [ "$age_days" -gt "$DEFAULT_STASH_MEDIUM_THRESHOLD" ]; then
-                # Medium age ($DEFAULT_STASH_MEDIUM_THRESHOLD-$DEFAULT_STASH_OLD_THRESHOLD days) in yellow
-                printf "\033[90m%s\033[0m  \033[33m%s\033[0m  \033[33m%s\033[0m\n" "$date_display" "$name_display" "$age_display"
+                # Medium age (30-60 days) in yellow
+                printf "\033[33m%s\033[0m  \033[33m%s\033[0m\n" "$name_display" "$age_display_padded"
             else
-                # Recent stashes (<$DEFAULT_STASH_MEDIUM_THRESHOLD days) in green
-                printf "\033[90m%s\033[0m  \033[33m%s\033[0m  \033[32m%s\033[0m\n" "$date_display" "$name_display" "$age_display"
+                # Recent stashes (<30 days) in green
+                printf "\033[33m%s\033[0m  \033[32m%s\033[0m\n" "$name_display" "$age_display_padded"
             fi
             
             # Show stash details if verbose mode
             if [ -n "$VERBOSE_MODE" ]; then
-                local indent=$((max_date_len + 2))
+                local indent=$((max_name_len + 2))
                 
                 if [ "$VERBOSE_MODE" = "oneline" ]; then
                     # Show files changed
